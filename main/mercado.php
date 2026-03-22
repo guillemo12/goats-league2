@@ -109,8 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             // EXECUTE TRANSFER
                             $pdo->beginTransaction();
                             try {
-                                // Deduct budget
+                                // Deduct from buyer
                                 $pdo->prepare("UPDATE teams SET budget = budget - ? WHERE id = ?")->execute([$calculatedPrice, $myTeamId]);
+                                // Add to seller
+                                $pdo->prepare("UPDATE teams SET budget = budget + ? WHERE id = ?")->execute([$calculatedPrice, $sellerTeamId]);
                                 // Move player
                                 $pdo->prepare("UPDATE users SET team_id = ? WHERE id = ?")->execute([$myTeamId, $pid]);
                                 // Log transfer
