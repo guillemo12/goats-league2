@@ -13,37 +13,31 @@ $userId = $_SESSION['user_id'];
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_pic'])) {
+    require_once __DIR__ . '/../cloudinary.php';
     $file = $_FILES['profile_pic'];
     
     if ($file['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = __DIR__ . '/../uploads/profiles/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
-        
-        $fileName = 'user_' . $userId . '_' . time() . '_' . preg_replace('/[^a-zA-Z0-9.\-_]/', '', basename($file['name']));
-        $targetPath = $uploadDir . $fileName;
-        
-        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        $publicId = 'goats-league/profiles/user_' . $userId . '_' . time();
+        $cloudUrl = cloudinary_upload($file['tmp_name'], 'goats-league/profiles', 'user_' . $userId . '_' . time());
+
+        if ($cloudUrl) {
+            // Delete old local file if it exists (legacy)
             $stmt = $pdo->prepare("SELECT profile_picture FROM users WHERE id = ?");
             $stmt->execute([$userId]);
             $oldPic = $stmt->fetchColumn();
-            
-            if ($oldPic && file_exists(__DIR__ . '/../' . $oldPic)) {
+            if ($oldPic && !str_starts_with($oldPic, 'http') && file_exists(__DIR__ . '/../' . $oldPic)) {
                 unlink(__DIR__ . '/../' . $oldPic);
             }
-            
-            $dbPath = 'uploads/profiles/' . $fileName;
+
             $stmt = $pdo->prepare("UPDATE users SET profile_picture = ? WHERE id = ?");
-            $stmt->execute([$dbPath, $userId]);
-            
-            $_SESSION['profile_picture'] = $dbPath;
+            $stmt->execute([$cloudUrl, $userId]);
+            $_SESSION['profile_picture'] = $cloudUrl;
             $message = '<div class="alert alert-success mt-3">Foto de perfil actualizada con éxito.</div>';
         } else {
-            $message = '<div class="alert alert-danger mt-3">Error al mover la imagen al directorio destino.</div>';
+            $message = '<div class="alert alert-danger mt-3">Error al subir la imagen a Cloudinary. Inténtalo de nuevo.</div>';
         }
     } else {
-        $message = '<div class="alert alert-danger mt-3">Por favor selecciona una imagen o verifica el tamaño máximo permitido.</div>';
+        $message = '<div class="alert alert-danger mt-3">Por favor selecciona una imagen válida.</div>';
     }
 }
 
