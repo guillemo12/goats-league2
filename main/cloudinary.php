@@ -16,7 +16,7 @@ define('CLOUDINARY_API_SECRET', getenv('CLOUDINARY_API_SECRET') ?: '4OBuLFOgaJyw
  * @param string $publicId  ID público opcional (sin extensión). Si no se pasa, Cloudinary genera uno.
  * @return string|null      URL https de la imagen subida, o null en caso de error.
  */
-function cloudinary_upload(string $filePath, string $folder = 'goats-league', string $publicId = ''): ?string {
+function cloudinary_upload(string $filePath, string $folder = 'goats-league', string $publicId = ''): array {
     $timestamp = time();
 
     $params = ['folder' => $folder, 'timestamp' => $timestamp];
