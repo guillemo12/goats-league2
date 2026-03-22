@@ -45,6 +45,11 @@ function cloudinary_upload(string $filePath, string $folder = 'goats-league', st
     curl_close($ch);
 
     $data = json_decode($response, true);
-    return $data['secure_url'] ?? null;
+    if (!isset($data['secure_url'])) {
+        return ['error' => $data['error']['message'] ?? $response];
+    }
+    return ['url' => $data['secure_url']];
 }
+
+
 ?>

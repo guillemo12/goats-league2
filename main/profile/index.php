@@ -110,13 +110,15 @@ $upcomingMatches = $stmtUpcoming->fetchAll();
                     </li>
                     <li class="nav-item ms-lg-3 d-flex align-items-center">
                         <a class="nav-link text-white me-2 d-flex align-items-center" href="index.php">
-                            <?php if (!empty($_SESSION['profile_picture'])): ?>
-                                <img src="../<?php echo htmlspecialchars($_SESSION['profile_picture']); ?>" alt="Perfil" class="profile-icon">
-                            <?php
-else: ?>
+                            <?php 
+                            $navPicUrl = $_SESSION['profile_picture'] ?? '';
+                            if (!empty($navPicUrl)): 
+                                $navSrc = str_starts_with($navPicUrl, 'http') ? $navPicUrl : '../' . $navPicUrl;
+                            ?>
+                                <img src="<?php echo htmlspecialchars($navSrc); ?>" alt="Perfil" class="profile-icon">
+                            <?php else: ?>
                                 <span class="profile-letter"><?php echo strtoupper(substr($_SESSION['user'], 0, 1)); ?></span>
-                            <?php
-endif; ?>
+                            <?php endif; ?>
                             <span class="ms-2 d-none d-lg-inline"><?php echo htmlspecialchars($_SESSION['user']); ?></span>
                         </a>
                         <a class="btn btn-outline-danger btn-sm" href="../login/logout.php">Cerrar Sesión</a>
@@ -133,8 +135,12 @@ endif; ?>
             <!-- Columna izquierda en escritorio, centro en móviles -->
             <div class="col-12 col-md-4 text-center text-md-start mb-4">
                 <div class="position-relative d-inline-block">
-                    <?php if (!empty($_SESSION['profile_picture'])): ?>
-                        <img src="../<?php echo htmlspecialchars($_SESSION['profile_picture']); ?>" alt="Foto de Perfil" class="rounded-circle shadow-lg" style="width: 180px; height: 180px; object-fit: cover; border: 4px solid #0d6efd;">
+                    <?php 
+                    $picUrl = $_SESSION['profile_picture'] ?? '';
+                    if (!empty($picUrl)): 
+                        $src = str_starts_with($picUrl, 'http') ? $picUrl : '../' . $picUrl;
+                    ?>
+                        <img src="<?php echo htmlspecialchars($src); ?>" alt="Foto de Perfil" class="rounded-circle shadow-lg" style="width: 180px; height: 180px; object-fit: cover; border: 4px solid #0d6efd;">
                     <?php
 else: ?>
                         <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center mx-auto shadow-lg" style="width: 180px; height: 180px; font-size: 80px; color: white;">

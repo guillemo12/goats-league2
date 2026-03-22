@@ -14,14 +14,17 @@ $msg = '';
 // Handle upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
     $teamId = (int)$_POST['team_id'];
-    $url = cloudinary_upload($_FILES['logo']['tmp_name'], 'goats-league/logos', 'team_' . $teamId . '_' . time());
-    if ($url) {
+    $result = cloudinary_upload($_FILES['logo']['tmp_name'], 'goats-league/logos', 'team_' . $teamId . '_' . time());
+    if (isset($result['url'])) {
+        $url = $result['url'];
         $pdo->prepare("UPDATE teams SET logo = ? WHERE id = ?")->execute([$url, $teamId]);
         $msg = '<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Logo actualizado correctamente.</div>';
     } else {
-        $msg = '<div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> Error al subir el logo a Cloudinary.</div>';
+        $errorMsg = $result['error'] ?? 'Error desconocido';
+        $msg = '<div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> Error Cloudinary: ' . htmlspecialchars($errorMsg) . '</div>';
     }
 }
+
 
 $teams = $pdo->query("SELECT id, name, logo FROM teams ORDER BY name ASC")->fetchAll();
 ?>

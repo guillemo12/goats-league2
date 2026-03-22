@@ -12,15 +12,23 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 $message = '';
 
+// Always refresh profile_picture from DB (session may have stale local path)
+$stmtPic = $pdo->prepare("SELECT profile_picture FROM users WHERE id = ?");
+$stmtPic->execute([$userId]);
+$freshPic = $stmtPic->fetchColumn();
+// Only use HTTPS Cloudinary URLs — local paths may point to deleted files
+$_SESSION['profile_picture'] = ($freshPic && str_starts_with($freshPic, 'http')) ? $freshPic : '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_pic'])) {
     require_once __DIR__ . '/../cloudinary.php';
     $file = $_FILES['profile_pic'];
     
     if ($file['error'] === UPLOAD_ERR_OK) {
         $publicId = 'goats-league/profiles/user_' . $userId . '_' . time();
-        $cloudUrl = cloudinary_upload($file['tmp_name'], 'goats-league/profiles', 'user_' . $userId . '_' . time());
+        $result = cloudinary_upload($file['tmp_name'], 'goats-league/profiles', 'user_' . $userId . '_' . time());
 
-        if ($cloudUrl) {
+        if (isset($result['url'])) {
+            $cloudUrl = $result['url'];
             // Delete old local file if it exists (legacy)
             $stmt = $pdo->prepare("SELECT profile_picture FROM users WHERE id = ?");
             $stmt->execute([$userId]);
@@ -34,7 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_pic'])) {
             $_SESSION['profile_picture'] = $cloudUrl;
             $message = '<div class="alert alert-success mt-3">Foto de perfil actualizada con éxito.</div>';
         } else {
-            $message = '<div class="alert alert-danger mt-3">Error al subir la imagen a Cloudinary. Inténtalo de nuevo.</div>';
+            $errorMsg = $result['error'] ?? 'Error desconocido';
+            $message = '<div class="alert alert-danger mt-3">Error Cloudinary: ' . htmlspecialchars($errorMsg) . '</div>';
         }
     } else {
         $message = '<div class="alert alert-danger mt-3">Por favor selecciona una imagen válida.</div>';
