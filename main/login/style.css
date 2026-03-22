@@ -1,0 +1,21 @@
+body {
+    background: #0f172a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-box {
+    background: #1e293b;
+    padding: 40px;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 350px;
+}
+
+.error {
+    color: #f87171;
+    margin-bottom: 15px;
+}

@@ -1,0 +1,42 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #010e22;
+    color: white !important;
+    margin: 0;
+}
+
+.card {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+}
+
+.text-muted {
+    color: #ced4da !important;
+}
+
+.navbar-brand {
+    color: #38bdf8 !important;
+    font-weight: bold;
+}
+
+.navbar,
+.dropdown-menu-dark {
+    background-color: #212529 !important;
+}
+
+a {
+    text-decoration: none !important;
+}
+
+.table-dark th,
+.table-dark td {
+    vertical-align: middle;
+}
+
+@media (min-width: 992px) {
+    .navbar-collapse {
+        display: flex !important;
+    }
+}
