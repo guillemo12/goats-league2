@@ -1,7 +1,7 @@
 <?php
 // Configuración para el Volumen persistente en Railway
 // El volumen de Railway debe estar montado en /app/data
-$volumeDir = '/app/data';
+$volumeDir = '/var/www/html/data';
 $dbFile = $volumeDir . '/goats-league.sqlite';
 $localTemplate = realpath(__DIR__ . '/../goats-league.sqlite');
 
@@ -11,7 +11,7 @@ if (!file_exists($dbFile)) {
     if (!file_exists($volumeDir)) {
         @mkdir($volumeDir, 0777, true);
     }
-    
+
     // Si tienes el archivo base en tu código fuente (localTemplate), lo copiamos al volumen.
     // Así empieza con los equipos y usuarios ya creados.
     if ($localTemplate && file_exists($localTemplate)) {
@@ -33,16 +33,17 @@ try {
     // Activar foreign keys en SQLite
     $pdo->exec('PRAGMA foreign_keys = ON;');
 
-    // Camino A: Crear tablas si no existen (simplificado)
-    // Para simplificar tu código, como ya has hecho git push de goats-league.sqlite con tus datos,
-    // ya no necesitas todos los CREATE TABLE aquí, porque el archivo ya tiene los datos :)
-    // Pero si algún día se borra, podrías ponerlos aquí abajo:
-    /*
-    $pdo->exec("CREATE TABLE IF NOT EXISTS teams (...)");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS users (...)");
-    */
+// Camino A: Crear tablas si no existen (simplificado)
+// Para simplificar tu código, como ya has hecho git push de goats-league.sqlite con tus datos,
+// ya no necesitas todos los CREATE TABLE aquí, porque el archivo ya tiene los datos :)
+// Pero si algún día se borra, podrías ponerlos aquí abajo:
+/*
+ $pdo->exec("CREATE TABLE IF NOT EXISTS teams (...)");
+ $pdo->exec("CREATE TABLE IF NOT EXISTS users (...)");
+ */
 
-} catch (PDOException $e) {
+}
+catch (PDOException $e) {
     die("Error de conexión a la base de datos (SQLite): " . $e->getMessage());
 }
 ?>
