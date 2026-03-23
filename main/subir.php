@@ -3,13 +3,14 @@
 // CUALQUIER PERSONA QUE CONOZCA ESTA RUTA PODRÍA SUBIR ARCHIVOS A TU SERVIDOR.
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['db'])) {
-    // Si el directorio no existe (en local no existirá, en Railway sí), intenta crearlo
-    $targetDir = '/app/data/';
+    // El servidor Apache corre bajo /var/www/html. Es más seguro montar el volumen aquí.
+    $targetDir = '/var/www/html/data/';
     if (!file_exists($targetDir)) {
         @mkdir($targetDir, 0777, true);
     }
     
-    $targetFile = $targetDir . 'database.sqlite'; // Usamos el nombre fijo para que detecte la db
+    // Guardamos el archivo con el nombre real 'goats-league.sqlite'
+    $targetFile = $targetDir . 'goats-league.sqlite'; 
     
     if (move_uploaded_file($_FILES['db']['tmp_name'], $targetFile)) {
         echo "<div style='background-color: #d4edda; color: #155724; padding: 15px; margin-bottom: 20px; border: 1px solid #c3e6cb; border-radius: 4px;'>";
