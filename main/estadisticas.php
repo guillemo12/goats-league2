@@ -93,6 +93,21 @@ $topRatedPlayers = $pdo->query("
     LIMIT 10
 ")->fetchAll();
 
+// 5. Máximos Contribuidores (Goles + Asistencias)
+$topContributors = $pdo->query("
+    SELECT u.id, u.username, u.profile_picture, t.name as team_name,
+           SUM(CASE WHEN me.event_type = 'goal'   THEN 1 ELSE 0 END) as goals,
+           SUM(CASE WHEN me.event_type = 'assist' THEN 1 ELSE 0 END) as assists,
+           COUNT(me.id) as total
+    FROM match_events me
+    JOIN users u ON me.player_id = u.id
+    LEFT JOIN teams t ON u.team_id = t.id
+    WHERE me.event_type IN ('goal','assist') AND u.role != 'admin'
+    GROUP BY u.id
+    ORDER BY total DESC, goals DESC, u.username ASC
+    LIMIT 10
+")->fetchAll();
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -324,6 +339,49 @@ $topRatedPlayers = $pdo->query("
                 </div>
             </div>
             
+        </div>
+
+        <!-- MÁXIMOS CONTRIBUIDORES -->
+        <h3 class="mt-5 mb-4 border-bottom border-danger text-danger pb-2"><i class="bi bi-fire"></i> Máximos Contribuidores (G+A)</h3>
+        <p class="text-muted small mb-4">Jugadores ordenados por la suma de goles y asistencias totales en la temporada.</p>
+        <div class="table-responsive shadow rounded mb-5">
+            <table class="table table-dark table-hover align-middle mb-0 border border-secondary">
+                <thead class="table-secondary text-dark small">
+                    <tr>
+                        <th class="px-3">#</th>
+                        <th>Jugador</th>
+                        <th>Equipo</th>
+                        <th class="text-center text-primary"><i class="bi bi-vinyl-fill"></i> Goles</th>
+                        <th class="text-center text-warning"><i class="bi bi-cursor-fill"></i> Asist.</th>
+                        <th class="text-center text-danger fw-bold">G+A</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (count($topContributors) > 0): ?>
+                    <?php foreach ($topContributors as $i => $p): ?>
+                    <tr>
+                        <td class="px-3 fw-bold text-warning">#<?php echo $i + 1; ?></td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <?php if (!empty($p['profile_picture']) && str_starts_with($p['profile_picture'], 'http')): ?>
+                                    <img src="<?php echo htmlspecialchars($p['profile_picture']); ?>" class="rounded-circle me-2 object-fit-cover border border-secondary shadow-sm" style="width:32px;height:32px;">
+                                <?php else: ?>
+                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2 fw-bold shadow-sm" style="width:32px;height:32px;font-size:13px;"><?php echo strtoupper(substr($p['username'],0,1)); ?></div>
+                                <?php endif; ?>
+                                <span class="fw-bold"><?php echo htmlspecialchars($p['username']); ?></span>
+                            </div>
+                        </td>
+                        <td class="text-muted small"><?php echo htmlspecialchars($p['team_name'] ?? 'Sin equipo'); ?></td>
+                        <td class="text-center"><span class="badge bg-primary rounded-pill px-3"><?php echo $p['goals']; ?></span></td>
+                        <td class="text-center"><span class="badge bg-warning text-dark rounded-pill px-3"><?php echo $p['assists']; ?></span></td>
+                        <td class="text-center"><span class="badge bg-danger rounded-pill fs-6 px-3 fw-bold"><?php echo $p['total']; ?></span></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php else: ?>
+                    <tr><td colspan="6" class="text-center text-muted py-4">No hay contribuciones registradas aún.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 
