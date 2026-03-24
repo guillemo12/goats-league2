@@ -381,20 +381,20 @@ foreach ($stmtMatchAvgs->fetchAll() as $row) {
         <div class="row">
             <!-- Columna Equipo 1 -->
             <div class="col-md-6 mb-4">
-                <h4 class="text-primary border-bottom border-primary pb-2">Alineación: <?php echo htmlspecialchars($match['team1_name']); ?></h4>
+                <h4 class="text-primary border-bottom border-primary pb-2">Alineación: <?php echo htmlspecialchars($match['team1_name'] ?? ''); ?></h4>
                 <ul class="list-group list-group-flush bg-transparent">
                     <?php if (count($lineups[$match['team1_id']]) > 0): ?>
                         <?php foreach ($lineups[$match['team1_id']] as $p): ?>
                             <li class="list-group-item bg-dark text-light border-secondary d-flex align-items-center justify-content-between p-2">
                                 <div class="d-flex align-items-center">
                                     <?php if (!empty($p['profile_picture'])): ?>
-                                        <img src="<?php echo htmlspecialchars($p['profile_picture']); ?>" class="rounded-circle me-3 border border-secondary" style="width: 40px; height: 40px; object-fit: cover;">
+                                        <img src="<?php echo htmlspecialchars($p['profile_picture'] ?? ''); ?>" class="rounded-circle me-3 border border-secondary" style="width: 40px; height: 40px; object-fit: cover;">
                                     <?php else: ?>
                                         <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3 fw-bold" style="width: 40px; height: 40px; font-size: 16px;">
                                             <?php echo strtoupper(substr($p['username'], 0, 1)); ?>
                                         </div>
                                     <?php endif; ?>
-                                    <span class="fw-semibold"><?php echo htmlspecialchars($p['username']); ?></span>
+                                    <span class="fw-semibold"><?php echo htmlspecialchars($p['username'] ?? ''); ?></span>
                                     <?php if (isset($matchPlayerAvgs[$p['id']])): ?>
                                         <span class="badge bg-success bg-opacity-75 ms-2 border border-success" title="<?php echo $matchPlayerAvgs[$p['id']]['votes']; ?> votos">
                                             <i class="bi bi-star-fill text-warning me-1"></i><?php echo number_format($matchPlayerAvgs[$p['id']]['avg'], 1); ?>
