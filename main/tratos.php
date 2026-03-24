@@ -12,6 +12,10 @@ if (isset($_GET['get_players'])) {
     exit;
 }
 
+// Check market state
+$mktStmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'market_open'");
+$isMarketOpen = (bool)$mktStmt->fetchColumn();
+
 // Auth check
 if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
 $myUserId = $_SESSION['user_id'];
@@ -62,7 +66,10 @@ $success = '';
 
 // Handle Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $action = $_POST['action'];
+    if (!$isMarketOpen) {
+        $error = "El mercado está cerrado. No se pueden realizar tratos en este momento.";
+    } else {
+        $action = $_POST['action'];
 
     // --- PROPOSE TRADE ---
     if ($action === 'propose_trade') {
@@ -143,6 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } catch (Exception $e) {
             $pdo->rollBack();
             $error = "Error al procesar el trato: " . $e->getMessage();
+        }
         }
     }
 }
@@ -233,9 +241,16 @@ function getPlayerNames($ids, $pdo) {
             <div class="alert alert-success"><?php echo $success; ?></div>
         <?php endif; ?>
 
+        <?php if (!$isMarketOpen): ?>
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i> 
+                <strong>Mercado Cerrado:</strong> Solo puedes ver tus ofertas actuales. No se pueden proponer ni aceptar nuevos tratos hasta que se abra el mercado.
+            </div>
+        <?php endif; ?>
+
         <div class="row">
             <!-- Columna de proponer trato -->
-            <div class="col-lg-4 mb-4">
+            <div class="col-lg-4 mb-4 <?php echo !$isMarketOpen ? 'opacity-50 pointer-events-none' : ''; ?>">
                 <div class="card bg-dark border-secondary shadow-sm">
                     <div class="card-header bg-primary text-white fw-bold">
                         <i class="bi bi-plus-circle me-1"></i> Proponer Nuevo Trato
@@ -331,16 +346,20 @@ function getPlayerNames($ids, $pdo) {
                                     </div>
                                 </div>
                                 <div class="mt-3 d-flex gap-2">
-                                    <form method="POST" class="flex-grow-1">
-                                        <input type="hidden" name="action" value="accept_trade">
-                                        <input type="hidden" name="trade_id" value="<?php echo $tr['id']; ?>">
-                                        <button type="submit" class="btn btn-success w-100 btn-sm fw-bold">ACEPTAR</button>
-                                    </form>
-                                    <form method="POST" class="flex-grow-1">
-                                        <input type="hidden" name="action" value="reject_trade">
-                                        <input type="hidden" name="trade_id" value="<?php echo $tr['id']; ?>">
-                                        <button type="submit" class="btn btn-outline-danger w-100 btn-sm">RECHAZAR</button>
-                                    </form>
+                                    <?php if ($isMarketOpen): ?>
+                                        <form method="POST" class="flex-grow-1">
+                                            <input type="hidden" name="action" value="accept_trade">
+                                            <input type="hidden" name="trade_id" value="<?php echo $tr['id']; ?>">
+                                            <button type="submit" class="btn btn-success w-100 btn-sm fw-bold">ACEPTAR</button>
+                                        </form>
+                                        <form method="POST" class="flex-grow-1">
+                                            <input type="hidden" name="action" value="reject_trade">
+                                            <input type="hidden" name="trade_id" value="<?php echo $tr['id']; ?>">
+                                            <button type="submit" class="btn btn-outline-danger w-100 btn-sm">RECHAZAR</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <button class="btn btn-secondary w-100 btn-sm" disabled>Mercado Cerrado</button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

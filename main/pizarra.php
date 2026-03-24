@@ -291,6 +291,15 @@ $playerSize = ($rivalId > 0) ? '40px' : '60px'; // Si es medio campo, los jugado
                     <li class="nav-item">
                         <a class="nav-link" href="mercado.php">Mercado</a>
                     </li>
+                    <?php 
+                    $mktStmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'market_open'");
+                    $isMktOpen = (bool)$mktStmt->fetchColumn();
+                    if ($isMktOpen && isset($_SESSION['role']) && ($_SESSION['role'] === 'capitan' || $_SESSION['role'] === 'admin')): 
+                    ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tratos.php">Tratos</a>
+                        </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link active" href="pizarra.php">Pizarra Táctica</a>
                     </li>
