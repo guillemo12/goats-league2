@@ -9,12 +9,13 @@ $errorMsg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_match' && $isAdmin) {
     $team1_id = (int)$_POST['team1_id'];
     $team2_id = (int)$_POST['team2_id'];
+    $jornadaNum = (int)$_POST['jornada'];
     $match_date = !empty($_POST['match_date']) ? $_POST['match_date'] : null;
 
-    if ($team1_id !== $team2_id) {
+    if ($team1_id !== $team2_id && $jornadaNum > 0) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO matches (team1_id, team2_id, match_date, status, team1_score, team2_score) VALUES (?, ?, ?, 'pending', 0, 0)");
-            $stmt->execute([$team1_id, $team2_id, $match_date]);
+            $stmt = $pdo->prepare("INSERT INTO matches (team1_id, team2_id, jornada, match_date, status, team1_score, team2_score) VALUES (?, ?, ?, ?, 'pending', 0, 0)");
+            $stmt->execute([$team1_id, $team2_id, $jornadaNum, $match_date]);
             header("Location: calendario.php");
             exit;
         }
@@ -23,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
     else {
-        $errorMsg = "Por favor, selecciona dos equipos diferentes y una fecha válida.";
+        $errorMsg = "Por favor, selecciona dos equipos diferentes, una jornada válida y una fecha.";
     }
 }
 
@@ -41,7 +42,7 @@ $stmtMatches = $pdo->query("
     FROM matches m
     JOIN teams t1 ON m.team1_id = t1.id
     JOIN teams t2 ON m.team2_id = t2.id
-    ORDER BY m.match_date ASC
+    ORDER BY m.jornada ASC, m.match_date ASC
 ");
 $matches = $stmtMatches->fetchAll();
 ?>
@@ -209,8 +210,13 @@ endif; ?>
                                 </select>
                             </div>
                             
+                            <div class="col-md-2">
+                                <label class="form-label text-light">Jornada</label>
+                                <input type="number" name="jornada" class="form-control bg-dark text-white border-secondary" min="1" placeholder="Ej: 1" required>
+                            </div>
+                            
                             <div class="col-md-3">
-                                <label class="form-label text-light">Fecha y Hora (Opcional)</label>
+                                <label class="form-label text-light">Fecha y Hora</label>
                                 <input type="datetime-local" name="match_date" class="form-control bg-dark text-white border-secondary text-white-50" style="color-scheme: dark;">
                             </div>
                             
@@ -226,10 +232,14 @@ endif; ?>
         
         <?php if (count($matches) > 0): ?>
             <?php
-            $matchesPerJornada = 2;
-            $jornadas = array_chunk($matches, $matchesPerJornada);
-            foreach ($jornadas as $jornadaNum => $jornada):
-                $numJornada = $jornadaNum + 1;
+            // Agrupar partidos por jornada correctamente según la base de datos
+            $jornadas = [];
+            foreach ($matches as $m) {
+                $jornadas[$m['jornada']][] = $m;
+            }
+            ksort($jornadas);
+
+            foreach ($jornadas as $numJornada => $jornada):
             ?>
                 <!-- Cabecera de Jornada -->
                 <div class="jornada-header">

@@ -168,11 +168,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Acción: Admin cambia la fecha del partido
-    if ($action === 'update_date' && $isAdmin && $match['status'] === 'pending') {
+    // Acción: Admin cambia la fecha y/o jornada del partido
+    if ($action === 'update_match_details' && $isAdmin && $match['status'] === 'pending') {
         $newDate = !empty($_POST['new_date']) ? $_POST['new_date'] : null;
-        $stmt = $pdo->prepare("UPDATE matches SET match_date = ? WHERE id = ?");
-        $stmt->execute([$newDate, $matchId]);
+        $newJornada = (int)$_POST['new_jornada'];
+        $stmt = $pdo->prepare("UPDATE matches SET match_date = ?, jornada = ? WHERE id = ?");
+        $stmt->execute([$newDate, $newJornada, $matchId]);
         header("Refresh:0");
         exit;
     }
@@ -357,11 +358,21 @@ foreach ($stmtMatchAvgs->fetchAll() as $row) {
                 <span class="badge bg-secondary mb-2 fs-6"><i class="bi bi-calendar-event me-1"></i> <?php echo $match['match_date'] ? date('d/m/Y H:i', strtotime($match['match_date'])) : 'Fecha por definir'; ?></span>
                 
                 <?php if ($isAdmin): ?>
-                    <form method="POST" class="d-inline-flex flex-wrap align-items-center justify-content-center bg-secondary bg-opacity-10 p-2 rounded border border-secondary w-100 mx-auto" style="max-width: 400px;">
-                        <input type="hidden" name="action" value="update_date">
-                        <label class="text-muted me-2 small fw-bold">Actualizar Fecha:</label>
-                        <input type="datetime-local" name="new_date" class="form-control form-control-sm bg-dark text-white border-secondary me-2 flex-grow-1" style="color-scheme: dark;" value="<?php echo $match['match_date'] ? date('Y-m-d\TH:i', strtotime($match['match_date'])) : ''; ?>">
-                        <button type="submit" class="btn btn-sm btn-outline-light"><i class="bi bi-save"></i> Guardar</button>
+                    <form method="POST" class="d-inline-flex flex-wrap align-items-center justify-content-center bg-secondary bg-opacity-10 p-3 rounded border border-secondary w-100 mx-auto" style="max-width: 500px;">
+                        <input type="hidden" name="action" value="update_match_details">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-auto">
+                                <label class="text-muted small fw-bold">Jornada:</label>
+                                <input type="number" name="new_jornada" class="form-control form-control-sm bg-dark text-white border-secondary" style="width: 70px;" value="<?php echo $match['jornada']; ?>" min="1" required>
+                            </div>
+                            <div class="col">
+                                <label class="text-muted small fw-bold">Fecha:</label>
+                                <input type="datetime-local" name="new_date" class="form-control form-control-sm bg-dark text-white border-secondary" style="color-scheme: dark;" value="<?php echo $match['match_date'] ? date('Y-m-d\TH:i', strtotime($match['match_date'])) : ''; ?>">
+                            </div>
+                            <div class="col-auto align-self-end">
+                                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-save"></i> Guardar</button>
+                            </div>
+                        </div>
                     </form>
                 <?php endif; ?>
             </div>
