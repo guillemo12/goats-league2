@@ -13,6 +13,36 @@ $me = $stmtMe->fetch();
 $myTeamId = $me['team_id'];
 $isCaptain = ($me['role'] === 'capitan');
 
+// --- CALCULAR PRESUPUESTO DINÁMICO ---
+// Fórmula: Media del Equipo + (1 * Partidos Jugados)
+if ($myTeamId) {
+    // 1. Obtener Partidos Jugados (pj) de este equipo
+    $stmtPJ = $pdo->prepare("SELECT COUNT(*) FROM matches WHERE (team1_id = ? OR team2_id = ?) AND status = 'finished'");
+    $stmtPJ->execute([$myTeamId, $myTeamId]);
+    $matchesPlayed = (int)$stmtPJ->fetchColumn();
+
+    // 2. Obtener Media del Equipo (Usamos la misma lógica que team.php)
+    $stmtTeamMatches = $pdo->prepare("SELECT id FROM matches WHERE (team1_id = ? OR team2_id = ?) AND status = 'finished' ORDER BY match_date DESC LIMIT 10");
+    $stmtTeamMatches->execute([$myTeamId, $myTeamId]);
+    $finishedMatches = $stmtTeamMatches->fetchAll();
+    
+    $teamRating = 0;
+    if (count($finishedMatches) > 0) {
+        $matchAvgs = [];
+        foreach ($finishedMatches as $fm) {
+            $stmtTop7 = $pdo->prepare("SELECT AVG(rating) FROM match_ratings WHERE match_id = ? AND target_id IN (SELECT id FROM users WHERE team_id = ?) GROUP BY target_id ORDER BY AVG(rating) DESC LIMIT 7");
+            $stmtTop7->execute([$fm['id'], $myTeamId]);
+            $topRatings = $stmtTop7->fetchAll(PDO::FETCH_COLUMN);
+            if (count($topRatings) > 0) $matchAvgs[] = array_sum($topRatings) / count($topRatings);
+        }
+        if (count($matchAvgs) > 0) $teamRating = array_sum($matchAvgs) / count($matchAvgs);
+    }
+    
+    // 3. Sobrescribir el presupuesto en el objeto $me para que se use en toda la página
+    $me['budget'] = $teamRating + (1.0 * $matchesPlayed);
+}
+// -------------------------------------
+
 // Check market state
 $mktStmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'market_open'");
 $isMarketOpen = (bool)$mktStmt->fetchColumn();
@@ -86,22 +116,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if ($cntSeller->fetchColumn() >= 1) {
                         $error = "Solo puedes fichar a 1 jugador de este mismo equipo.";
                     } else {
-                        // Calculate price
-                        $stmtPrice = $pdo->prepare("
-                            SELECT SUM(match_avg) as price
-                            FROM (
-                                SELECT AVG(mr.rating) as match_avg
-                                FROM match_ratings mr
-                                JOIN matches m ON mr.match_id = m.id
-                                WHERE mr.target_id = ? AND m.status = 'finished'
-                                GROUP BY mr.match_id
-                                ORDER BY m.match_date DESC
-                                LIMIT 6
-                            ) as recent_matches
-                        ");
+                        // Calculate price: "Media literal" (User rating column)
+                        $stmtPrice = $pdo->prepare("SELECT rating FROM users WHERE id = ?");
                         $stmtPrice->execute([$pid]);
                         $calculatedPrice = (float)$stmtPrice->fetchColumn();
-                        if ($calculatedPrice == 0) $calculatedPrice = 1; // Minimum base cost if 0 ratings? Let's say 0 is FREE if they never played. User didn't specify. We'll leave it as calculated.
+                        if ($calculatedPrice <= 0) $calculatedPrice = 1.0; 
                         
                         if ($me['budget'] < $calculatedPrice) {
                             $error = "Fondos insuficientes. Necesitas " . number_format($calculatedPrice, 2) . " y tienes " . number_format($me['budget'], 2);
@@ -143,22 +162,12 @@ if ($myTeamId) {
     $stmtMkt->execute([$myTeamId]);
     $marketPlayersRaw = $stmtMkt->fetchAll();
     
-    // Add calculated prices
+    // Add calculated prices: "Media literal"
     foreach ($marketPlayersRaw as $mp) {
-        $stmtPrice = $pdo->prepare("
-            SELECT SUM(match_avg) as price
-            FROM (
-                SELECT AVG(mr.rating) as match_avg
-                FROM match_ratings mr
-                JOIN matches m ON mr.match_id = m.id
-                WHERE mr.target_id = ? AND m.status = 'finished'
-                GROUP BY mr.match_id
-                ORDER BY m.match_date DESC
-                LIMIT 6
-            ) as recent_matches
-        ");
+        $stmtPrice = $pdo->prepare("SELECT rating FROM users WHERE id = ?");
         $stmtPrice->execute([$mp['id']]);
         $mp['price'] = (float)$stmtPrice->fetchColumn();
+        if ($mp['price'] <= 0) $mp['price'] = 1.0;
         $marketPlayers[] = $mp;
     }
 }

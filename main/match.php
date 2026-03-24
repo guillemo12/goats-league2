@@ -187,6 +187,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Acción: Jugador valora a un rival
     if ($action === 'rate_player' && $userId && $match['status'] === 'finished') {
+        if ($match['voting_closed']) {
+            if (!empty($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'error' => 'Las votaciones para este partido están cerradas.']);
+                exit;
+            }
+            $_SESSION['error'] = "Las votaciones están cerradas.";
+            header("Location: match.php?id=$matchId");
+            exit;
+        }
+
         $targetId = (int)$_POST['target_id'];
         $rating = (float)$_POST['rating'];
         $ok = false;
@@ -663,6 +674,7 @@ foreach ($stmtMatchAvgs->fetchAll() as $row) {
                             </div>
                         <?php endforeach; ?>
                     </div>
+                <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>

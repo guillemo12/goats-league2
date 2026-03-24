@@ -28,6 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Acción: Admin cambia el estado de las votaciones
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_voting' && $isAdmin) {
+    $matchId = (int)$_POST['match_id'];
+    $newState = (int)$_POST['new_state'];
+    $pdo->prepare("UPDATE matches SET voting_closed = ? WHERE id = ?")->execute([$newState, $matchId]);
+    header("Location: calendario.php");
+    exit;
+}
+
 // Obtener equipos para el desplegable del creador de partidos
 $allTeams = [];
 if ($isAdmin) {
@@ -257,6 +266,22 @@ endif; ?>
                                         <small class="text-muted"><i class="bi bi-calendar-event me-1"></i> <?php echo $match['match_date'] ? date('d/m/Y H:i', strtotime($match['match_date'])) : 'Fecha por definir'; ?></small>
                                         <?php if ($match['status'] === 'finished'): ?>
                                             <span class="badge bg-success">Finalizado</span>
+                                            <div class="ms-2 d-inline-block">
+                                                <span class="badge <?php echo $match['voting_closed'] ? 'bg-danger' : 'bg-success'; ?>-subtle <?php echo $match['voting_closed'] ? 'text-danger' : 'text-success'; ?> border <?php echo $match['voting_closed'] ? 'border-danger' : 'border-success'; ?>" style="font-size: 0.7rem;">
+                                                    <i class="bi <?php echo $match['voting_closed'] ? 'bi-lock-fill' : 'bi-unlock-fill'; ?>"></i>
+                                                    <?php echo $match['voting_closed'] ? 'Cerrado' : 'Abierto'; ?>
+                                                </span>
+                                                <?php if ($isAdmin): ?>
+                                                    <form method="POST" class="d-inline ms-1">
+                                                        <input type="hidden" name="action" value="toggle_voting">
+                                                        <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
+                                                        <input type="hidden" name="new_state" value="<?php echo $match['voting_closed'] ? '0' : '1'; ?>">
+                                                        <button type="submit" class="btn btn-link p-0 text-decoration-none" style="font-size: 0.7rem; vertical-align: middle;">
+                                                            <?php echo $match['voting_closed'] ? 'Abrir' : 'Cerrar'; ?>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
                                         <?php else: ?>
                                             <span class="badge bg-warning text-dark">Pendiente</span>
                                         <?php endif; ?>
