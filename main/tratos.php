@@ -2,6 +2,16 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
+// Mini-API para cargar jugadores por equipo (AJAX)
+if (isset($_GET['get_players'])) {
+    header('Content-Type: application/json');
+    $teamId = (int)$_GET['get_players'];
+    $stmt = $pdo->prepare("SELECT id, username FROM users WHERE team_id = ? ORDER BY username");
+    $stmt->execute([$teamId]);
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    exit;
+}
+
 // Auth check
 if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
 $myUserId = $_SESSION['user_id'];
@@ -13,6 +23,23 @@ $me = $stmtMe->fetch();
 $myTeamId = $me['team_id'];
 $isCaptain = ($me['role'] === 'capitan');
 $isAdmin = ($me['role'] === 'admin');
+
+// --- COMPROBAR PRESUPUESTO DINÁMICO ---
+if ($myTeamId) {
+    // 1. Partidos jugados
+    $stmtPJ = $pdo->prepare("SELECT COUNT(*) FROM matches WHERE (team1_id = ? OR team2_id = ?) AND status = 'finished'");
+    $stmtPJ->execute([$myTeamId, $myTeamId]);
+    $matchesPlayed = (int)$stmtPJ->fetchColumn();
+
+    // 2. Puntos en la clasificación
+    $stmtPoints = $pdo->prepare("SELECT points FROM teams WHERE id = ?");
+    $stmtPoints->execute([$myTeamId]);
+    $teamPoints = (float)$stmtPoints->fetchColumn();
+
+    // 3. Ajuste de presupuesto (DB)
+    $dbBudgetAdjustment = (float)($me['db_budget'] ?? 0);
+    $me['budget'] = $teamPoints + (1.0 * $matchesPlayed) + $dbBudgetAdjustment;
+}
 
 if (!$isCaptain && !$isAdmin) {
     die("Acceso denegado. Solo los capitanes y administradores pueden gestionar tratos.");
@@ -180,8 +207,11 @@ function getPlayerNames($ids, $pdo) {
     </nav>
 
     <div class="container mt-4">
-        <h2 class="mb-4 d-flex align-items-center">
-            <i class="bi bi-arrow-left-right text-primary me-2"></i> Centro de Tratos
+        <h2 class="mb-4 d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-arrow-left-right text-primary me-2"></i> Centro de Tratos</span>
+            <?php if (isset($me['budget'])): ?>
+                <span class="badge bg-success fs-5">Presupuesto: <?php echo number_format($me['budget'], 2); ?> €</span>
+            <?php endif; ?>
         </h2>
 
         <?php if ($error): ?>
@@ -391,17 +421,6 @@ function getPlayerNames($ids, $pdo) {
             });
     }
 
-    // Parte del "mini-endpoint" incrustado para AJAX
-    <?php
-    if (isset($_GET['get_players'])) {
-        ob_clean();
-        $teamId = (int)$_GET['get_players'];
-        $stmt = $pdo->prepare("SELECT id, username FROM users WHERE team_id = ? ORDER BY username");
-        $stmt->execute([$teamId]);
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-        exit;
-    }
-    ?>
     </script>
 </body>
 </html>
