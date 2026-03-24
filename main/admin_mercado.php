@@ -9,6 +9,23 @@ $stmt->execute([$_SESSION['user_id']]);
 $meInfo = $stmt->fetch();
 if (!$meInfo || $meInfo['role'] !== 'admin') { header("Location: index.php"); exit; }
 
+// --- DATABASE AUTO-FIX ---
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS team_finances (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        team_id INT NOT NULL,
+        match_id INT NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+    // Comprobar si existe revenue_paid en matches
+    $checkMatchCol = $pdo->query("SHOW COLUMNS FROM matches LIKE 'revenue_paid'");
+    if (!$checkMatchCol->fetch()) {
+        $pdo->exec("ALTER TABLE matches ADD COLUMN revenue_paid TINYINT(1) DEFAULT 0");
+    }
+} catch (PDOException $e) {}
+// --------------------------
+
 // Toggle Market Status
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'toggle_market') {
