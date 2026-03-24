@@ -622,59 +622,67 @@ foreach ($stmtMatchAvgs->fetchAll() as $row) {
         <!-- Votaciones Jugadores Rivales -->
         <?php if ($imPlayingInMatch && $match['status'] === 'finished' && count($opponents) > 0): ?>
             <div class="card bg-dark border-success mt-4 mb-5 shadow">
-                <div class="card-header bg-success text-white fw-bold">
-                    <i class="bi bi-star-fill me-1"></i> Valora a los rivales del partido
+                <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-star-fill me-1"></i> Valora a los rivales del partido</span>
+                    <?php if ($match['voting_closed']): ?>
+                        <span class="badge bg-danger"><i class="bi bi-lock-fill"></i> CERRADO</span>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small mb-4">Solo puedes valorar a los jugadores del equipo contrario que hayan participado en este partido.</p>
-                    <div class="row row-cols-1 row-cols-md-2 g-3" id="ratings-container">
-                        <?php foreach ($opponents as $opp): ?>
-                            <div class="col" id="vote-col-<?php echo $opp['id']; ?>">
-                                <?php if (isset($myVotes[$opp['id']])): ?>
-                                    <div class="d-flex align-items-center bg-secondary bg-opacity-10 p-2 rounded border border-success">
-                                        <div class="me-auto text-truncate d-flex align-items-center">
-                                            <?php if (!empty($opp['profile_picture'])): ?>
-                                                <img src="<?php echo htmlspecialchars($opp['profile_picture']); ?>" class="rounded-circle me-2 border border-secondary" style="width: 32px; height: 32px; object-fit: cover;">
-                                            <?php else: ?>
-                                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 32px; height: 32px; font-size: 12px; border: 1px solid #6c757d;">
-                                                    <?php echo strtoupper(substr($opp['username'], 0, 1)); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            <strong><?php echo htmlspecialchars($opp['username']); ?></strong>
+                    <?php if ($match['voting_closed']): ?>
+                        <div class="alert alert-danger bg-dark border-danger text-center m-0">
+                            <i class="bi bi-lock-fill me-2"></i> El administrador ha cerrado las votaciones para este partido. Ya no se permiten nuevos votos.
+                        </div>
+                    <?php else: ?>
+                        <p class="text-muted small mb-4">Solo puedes valorar a los jugadores del equipo contrario que hayan participado en este partido.</p>
+                        <div class="row row-cols-1 row-cols-md-2 g-3" id="ratings-container">
+                            <?php foreach ($opponents as $opp): ?>
+                                <div class="col" id="vote-col-<?php echo $opp['id']; ?>">
+                                    <?php if (isset($myVotes[$opp['id']])): ?>
+                                        <div class="d-flex align-items-center bg-secondary bg-opacity-10 p-2 rounded border border-success">
+                                            <div class="me-auto text-truncate d-flex align-items-center">
+                                                <?php if (!empty($opp['profile_picture'])): ?>
+                                                    <img src="<?php echo htmlspecialchars($opp['profile_picture']); ?>" class="rounded-circle me-2 border border-secondary" style="width: 32px; height: 32px; object-fit: cover;">
+                                                <?php else: ?>
+                                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 32px; height: 32px; font-size: 12px; border: 1px solid #6c757d;">
+                                                        <?php echo strtoupper(substr($opp['username'], 0, 1)); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <strong><?php echo htmlspecialchars($opp['username']); ?></strong>
+                                            </div>
+                                            <div class="d-flex align-items-center text-success fw-bold">
+                                                <i class="bi bi-check-circle-fill me-2"></i> Nota: <?php echo number_format($myVotes[$opp['id']], 1); ?>
+                                            </div>
                                         </div>
-                                        <div class="d-flex align-items-center text-success fw-bold">
-                                            <i class="bi bi-check-circle-fill me-2"></i> Nota: <?php echo number_format($myVotes[$opp['id']], 1); ?>
+                                    <?php else: ?>
+                                        <div class="d-flex align-items-center bg-secondary bg-opacity-10 p-2 rounded border border-secondary vote-form-wrap">
+                                            <div class="me-auto text-truncate d-flex align-items-center">
+                                                <?php if (!empty($opp['profile_picture'])): ?>
+                                                    <img src="<?php echo htmlspecialchars($opp['profile_picture']); ?>" class="rounded-circle me-2 border border-secondary" style="width: 32px; height: 32px; object-fit: cover;">
+                                                <?php else: ?>
+                                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 32px; height: 32px; font-size: 12px; border: 1px solid #6c757d;">
+                                                        <?php echo strtoupper(substr($opp['username'], 0, 1)); ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <strong><?php echo htmlspecialchars($opp['username']); ?></strong>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <input type="number" step="0.5" min="1" max="10" placeholder="1-10"
+                                                    class="form-control form-control-sm bg-dark text-light border-secondary me-2 rating-input"
+                                                    style="width: 70px;"
+                                                    data-target="<?php echo $opp['id']; ?>">
+                                                <button class="btn btn-sm btn-outline-success vote-btn"
+                                                    data-target="<?php echo $opp['id']; ?>"
+                                                    data-match="<?php echo $matchId; ?>">
+                                                    Votar
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="d-flex align-items-center bg-secondary bg-opacity-10 p-2 rounded border border-secondary vote-form-wrap">
-                                        <div class="me-auto text-truncate d-flex align-items-center">
-                                            <?php if (!empty($opp['profile_picture'])): ?>
-                                                <img src="<?php echo htmlspecialchars($opp['profile_picture']); ?>" class="rounded-circle me-2 border border-secondary" style="width: 32px; height: 32px; object-fit: cover;">
-                                            <?php else: ?>
-                                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 32px; height: 32px; font-size: 12px; border: 1px solid #6c757d;">
-                                                    <?php echo strtoupper(substr($opp['username'], 0, 1)); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            <strong><?php echo htmlspecialchars($opp['username']); ?></strong>
-                                        </div>
-                                        <div class="d-flex align-items-center">
-                                            <input type="number" step="0.5" min="1" max="10" placeholder="1-10"
-                                                class="form-control form-control-sm bg-dark text-light border-secondary me-2 rating-input"
-                                                style="width: 70px;"
-                                                data-target="<?php echo $opp['id']; ?>">
-                                            <button class="btn btn-sm btn-outline-success vote-btn"
-                                                data-target="<?php echo $opp['id']; ?>"
-                                                data-match="<?php echo $matchId; ?>">
-                                                Votar
-                                            </button>
-                                        </div>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>
