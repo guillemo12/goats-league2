@@ -39,7 +39,9 @@ if ($myTeamId) {
     }
     
     // 3. Sobrescribir el presupuesto en el objeto $me para que se use en toda la página
-    $me['budget'] = $teamRating + (1.0 * $matchesPlayed);
+    // Usamos el presupuesto de la DB como un "ajuste" (ganancias/pérdidas por fichajes/tratos)
+    $dbBudget = (float)($me['budget'] ?? 0);
+    $me['budget'] = $teamRating + $matchesPlayed + $dbBudget;
 }
 // -------------------------------------
 
@@ -233,6 +235,9 @@ $transfers = $pdo->query("
                     <li class="nav-item"><a class="nav-link" href="estadisticas.php">Estadísticas</a></li>
                     <li class="nav-item"><a class="nav-link" href="jugadores.php">Jugadores</a></li>
                     <li class="nav-item"><a class="nav-link active" href="mercado.php">Mercado</a></li>
+                    <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'capitan' || $_SESSION['role'] === 'admin')): ?>
+                        <li class="nav-item"><a class="nav-link" href="tratos.php">Tratos</a></li>
+                    <?php endif; ?>
                     <li class="nav-item"><a class="nav-link" href="pizarra.php">Pizarra Táctica</a></li>
                     <li class="nav-item"><a class="nav-link" href="calendario.php">Calendario</a></li>
 
