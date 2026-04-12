@@ -208,9 +208,11 @@ endif; ?>
                                 <p class="card-text text-muted small mt-1 mb-2">
                                     <?php echo ucfirst(htmlspecialchars($player['role'])); ?>
                                 </p>
-                                <div class="d-inline-flex align-items-center badge bg-dark border border-warning text-warning px-3 py-2 mt-1 rounded-pill shadow-sm">
-                                    <i class="bi bi-star-fill me-2"></i> <span class="fs-6"><?php echo number_format($player['rating'] ?? 0, 1); ?> / 10</span>
-                                </div>
+                                <?php if ($player['rating'] > 0): ?>
+                                    <div class="d-inline-flex align-items-center badge bg-dark border border-warning text-warning px-3 py-2 mt-1 rounded-pill shadow-sm">
+                                        <i class="bi bi-star-fill me-2"></i> <span class="fs-6"><?php echo number_format($player['rating'] ?? 0, 1); ?> / 10</span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
