@@ -118,11 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if ($cntSeller->fetchColumn() >= 1) {
                         $error = "Solo puedes fichar a 1 jugador de este mismo equipo.";
                     } else {
-                        // Calculate price: "Media literal" (User rating column)
-                        $stmtPrice = $pdo->prepare("SELECT rating FROM users WHERE id = ?");
-                        $stmtPrice->execute([$pid]);
-                        $calculatedPrice = (float)$stmtPrice->fetchColumn();
-                        if ($calculatedPrice <= 0) $calculatedPrice = 1.0; 
+                        // Calculate price: Temporarily forced to 0.0
+                        $calculatedPrice = 0.0;
                         
                         if ($me['budget'] < $calculatedPrice) {
                             $error = "Fondos insuficientes. Necesitas " . number_format($calculatedPrice, 2) . " y tienes " . number_format($me['budget'], 2);
@@ -162,12 +159,9 @@ if ($myTeamId) {
     $stmtMkt->execute([$myTeamId]);
     $marketPlayersRaw = $stmtMkt->fetchAll();
     
-    // Add calculated prices: "Media literal"
+    // Add calculated prices: Temporarily forced to 0.0
     foreach ($marketPlayersRaw as $mp) {
-        $stmtPrice = $pdo->prepare("SELECT rating FROM users WHERE id = ?");
-        $stmtPrice->execute([$mp['id']]);
-        $mp['price'] = (float)$stmtPrice->fetchColumn();
-        if ($mp['price'] <= 0) $mp['price'] = 1.0;
+        $mp['price'] = 0.0;
         $marketPlayers[] = $mp;
     }
 }
