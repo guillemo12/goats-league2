@@ -36,10 +36,12 @@ foreach ($rawTeams as $t) {
         else                           $d++;
     }
 
+    $calc_points = ($v * 3) + ($e * 1);
+
     $teams[] = [
         'id'     => $tid,
         'name'   => $t['name'],
-        'points' => $t['points'],
+        'points' => $calc_points,
         'pj'     => $pj,
         'v'      => $v,
         'e'      => $e,
