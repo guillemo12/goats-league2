@@ -25,6 +25,29 @@ $stmt = $pdo->prepare("
 $stmt->execute([$matchId]);
 $match = $stmt->fetch();
 
+// AUTO-CERRAR VOTACIONES DESPUÉS DE 3 DÍAS
+if ($match && $match['status'] === 'finished' && $match['voting_closed'] == 0 && !empty($match['match_date'])) {
+    $matchDate = strtotime($match['match_date']);
+    $threeDaysLater = $matchDate + (3 * 86400); // 3 días
+    // Auto-cierre
+    if (time() >= $threeDaysLater) {
+        $pdo->prepare("UPDATE matches SET voting_closed = 1 WHERE id = ?")->execute([$matchId]);
+        $match['voting_closed'] = 1;
+        
+        // Recalcular medias para todos los jugadores que recibieron votos en este partido
+        $pdo->prepare("
+            UPDATE users u 
+            SET rating = COALESCE((
+                SELECT AVG(mr.rating) 
+                FROM match_ratings mr 
+                JOIN matches m ON mr.match_id = m.id 
+                WHERE mr.target_id = u.id AND m.voting_closed = 1
+            ), 0)
+            WHERE u.id IN (SELECT target_id FROM match_ratings WHERE match_id = ?)
+        ")->execute([$matchId]);
+    }
+}
+
 if (!$match) {
     header('Location: calendario.php');
     exit;
@@ -74,8 +97,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtDelVotes = $pdo->prepare("DELETE FROM match_ratings WHERE match_id = ? AND target_id = ?");
         $stmtDelVotes->execute([$matchId, $playerId]);
         
-        // Actualizar media global del jugador
-        $stmtAvg = $pdo->prepare("UPDATE users SET rating = COALESCE((SELECT AVG(rating) FROM match_ratings WHERE target_id = ?), 0) WHERE id = ?");
+        // Actualizar media global del jugador (solo de partidos cerrados)
+        $stmtAvg = $pdo->prepare("
+            UPDATE users SET rating = COALESCE((
+                SELECT AVG(mr.rating) 
+                FROM match_ratings mr 
+                JOIN matches m ON mr.match_id = m.id 
+                WHERE mr.target_id = ? AND m.voting_closed = 1
+            ), 0) WHERE id = ?
+        ");
         $stmtAvg->execute([$playerId, $playerId]);
     }
     
@@ -187,6 +217,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Acción: Admin cambia estado de votaciones (Abrir/Cerrar)
+    if ($action === 'toggle_voting' && $isAdmin && $match['status'] === 'finished') {
+        $newClosedStatus = $match['voting_closed'] ? 0 : 1;
+        $stmt = $pdo->prepare("UPDATE matches SET voting_closed = ? WHERE id = ?");
+        $stmt->execute([$newClosedStatus, $matchId]);
+        
+        // Recalcular medias para todos los jugadores de este partido
+        $pdo->prepare("
+            UPDATE users u 
+            SET rating = COALESCE((
+                SELECT AVG(mr.rating) 
+                FROM match_ratings mr 
+                JOIN matches m ON mr.match_id = m.id 
+                WHERE mr.target_id = u.id AND m.voting_closed = 1
+            ), 0)
+            WHERE u.id IN (SELECT target_id FROM match_ratings WHERE match_id = ?)
+        ")->execute([$matchId]);
+        
+        header("Refresh:0");
+        exit;
+    }
+
     // Acción: Admin elimina una estadística o evento
     if ($action === 'remove_event' && $isAdmin && $match['status'] === 'finished') {
         $eventId = (int)$_POST['event_id'];
@@ -227,8 +279,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmtRate = $pdo->prepare("INSERT INTO match_ratings (match_id, voter_id, target_id, rating) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE rating = VALUES(rating)");
                     $stmtRate->execute([$matchId, $userId, $targetId, $rating]);
                     
-                    // Actualizar la media global del jugador objetivo
-                    $stmtAvg = $pdo->prepare("UPDATE users SET rating = (SELECT AVG(rating) FROM match_ratings WHERE target_id = ?) WHERE id = ?");
+                    // Actualizar la media global del jugador objetivo (solo de partidos cerrados)
+                    $stmtAvg = $pdo->prepare("
+                        UPDATE users SET rating = COALESCE((
+                            SELECT AVG(mr.rating) 
+                            FROM match_ratings mr 
+                            JOIN matches m ON mr.match_id = m.id 
+                            WHERE mr.target_id = ? AND m.voting_closed = 1
+                        ), 0) WHERE id = ?
+                    ");
                     $stmtAvg->execute([$targetId, $targetId]);
                     
                     $ok = true;
@@ -287,15 +346,17 @@ if ($userId && $match['status'] === 'finished') {
     }
 }
 
-// Media de notas recibidas por cada jugador en ESTE partido
+// Media de notas recibidas por cada jugador en ESTE partido (sólo si las votaciones están cerradas)
 $matchPlayerAvgs = [];
-$stmtMatchAvgs = $pdo->prepare("SELECT target_id, AVG(rating) as avg_rating, COUNT(rating) as votes FROM match_ratings WHERE match_id = ? GROUP BY target_id");
-$stmtMatchAvgs->execute([$matchId]);
-foreach ($stmtMatchAvgs->fetchAll() as $row) {
-    $matchPlayerAvgs[$row['target_id']] = [
-        'avg' => (float)$row['avg_rating'],
-        'votes' => (int)$row['votes']
-    ];
+if ($match['voting_closed']) {
+    $stmtMatchAvgs = $pdo->prepare("SELECT target_id, AVG(rating) as avg_rating, COUNT(rating) as votes FROM match_ratings WHERE match_id = ? GROUP BY target_id");
+    $stmtMatchAvgs->execute([$matchId]);
+    foreach ($stmtMatchAvgs->fetchAll() as $row) {
+        $matchPlayerAvgs[$row['target_id']] = [
+            'avg' => (float)$row['avg_rating'],
+            'votes' => (int)$row['votes']
+        ];
+    }
 }
 
 // Goles y asistencias por jugador en ESTE partido
@@ -562,6 +623,34 @@ foreach ($stmtStats->fetchAll() as $row) {
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if ($isAdmin && $match['status'] === 'finished'): ?>
+            <div class="card bg-dark border-info mt-4 mb-3 shadow">
+                <div class="card-header bg-info text-dark fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-gear-fill me-1"></i> Administrar Votaciones</span>
+                    <?php if ($match['voting_closed']): ?>
+                        <span class="badge bg-danger border border-dark">Cerradas</span>
+                    <?php else: ?>
+                        <span class="badge bg-success border border-dark">Abiertas</span>
+                    <?php endif; ?>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="d-flex align-items-center flex-wrap gap-3">
+                        <input type="hidden" name="action" value="toggle_voting">
+                        <p class="mb-0 text-muted small flex-grow-1">
+                            <?php if ($match['voting_closed']): ?>
+                                Las votaciones están cerradas. Las notas ya cuentan para su media global.
+                            <?php else: ?>
+                                Las votaciones están abiertas. Las notas de este partido aún no son visibles ni cuentan para la media global. 
+                            <?php endif; ?>
+                        </p>
+                        <button type="submit" class="btn <?php echo $match['voting_closed'] ? 'btn-outline-success' : 'btn-outline-danger'; ?> text-nowrap">
+                            <?php echo $match['voting_closed'] ? '<i class="bi bi-unlock-fill"></i> Abrir Votaciones' : '<i class="bi bi-lock-fill"></i> Cerrar Votaciones'; ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Acciones Post-Partido -->
         <?php if (($isAdmin || $isCaptainOfPlayingTeam) && $match['status'] === 'pending' && count($lineups[$match['team1_id']]) > 0 && count($lineups[$match['team2_id']]) > 0): ?>
