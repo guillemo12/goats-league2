@@ -22,7 +22,18 @@ if (!$team) {
 }
 
 // Obtener los jugadores del equipo
-$stmtPlayers = $pdo->prepare("SELECT username, role, profile_picture, rating FROM users WHERE team_id = ? AND role != 'admin' ORDER BY username ASC");
+$stmtPlayers = $pdo->prepare("
+    SELECT username, role, profile_picture, 
+    (
+        SELECT AVG(mr.rating) 
+        FROM match_ratings mr 
+        JOIN matches m ON mr.match_id = m.id 
+        WHERE mr.target_id = users.id AND m.voting_closed = 1
+    ) as rating 
+    FROM users 
+    WHERE team_id = ? AND role != 'admin' 
+    ORDER BY username ASC
+");
 $stmtPlayers->execute([$teamId]);
 $players = $stmtPlayers->fetchAll();
 
@@ -157,7 +168,7 @@ endif; ?>
         <!-- Cabecera del Equipo -->
         <div class="row align-items-center mb-5 bg-dark border border-secondary p-4 rounded-4 shadow-sm">
             <div class="col-md-3 text-center mb-3 mb-md-0">
-                <?php if (!empty($team['logo']) && file_exists(__DIR__ . '/' . $team['logo'])): ?>
+                <?php if (!empty($team['logo'])): ?>
                     <img src="<?php echo htmlspecialchars($team['logo']); ?>" alt="Logo Equipo" class="img-fluid rounded-circle" style="max-width: 150px; border: 5px solid #0d6efd;">
                 <?php
 else: ?>
