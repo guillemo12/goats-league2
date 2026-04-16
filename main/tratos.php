@@ -3,6 +3,13 @@ session_set_cookie_params(['lifetime' => 86400 * 30, 'path' => '/']);
 session_start();
 require_once __DIR__ . '/db.php';
 
+// Check market state
+$mktStmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'market_open'");
+$isMarketOpen = (bool)$mktStmt->fetchColumn();
+
+// Auth check
+if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
+
 // Mini-API para cargar jugadores por equipo (AJAX)
 if (isset($_GET['get_players'])) {
     header('Content-Type: application/json');
@@ -12,13 +19,6 @@ if (isset($_GET['get_players'])) {
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
     exit;
 }
-
-// Check market state
-$mktStmt = $pdo->query("SELECT setting_value FROM settings WHERE setting_key = 'market_open'");
-$isMarketOpen = (bool)$mktStmt->fetchColumn();
-
-// Auth check
-if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit; }
 $myUserId = $_SESSION['user_id'];
 
 // Load my info
