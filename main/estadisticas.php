@@ -7,38 +7,66 @@ require_once __DIR__ . '/db.php';
 $teams = $pdo->query("SELECT * FROM teams")->fetchAll();
 $teamRatings = [];
 
+// Obtener todos los partidos finalizados y cerrados
+$matchesQuery = $pdo->query("SELECT id, team1_id, team2_id FROM matches WHERE status = 'finished' AND voting_closed = 1")->fetchAll();
+
+$validMatches = [];
+$teamMatches = [];
+foreach ($matchesQuery as $m) {
+    $mId = $m['id'];
+    $t1 = $m['team1_id'];
+    $t2 = $m['team2_id'];
+    $validMatches[$mId] = true;
+
+    if (!isset($teamMatches[$t1])) $teamMatches[$t1] = [];
+    if (!isset($teamMatches[$t2])) $teamMatches[$t2] = [];
+    $teamMatches[$t1][] = $mId;
+    $teamMatches[$t2][] = $mId;
+}
+
+if (!empty($validMatches)) {
+    $matchIdsStr = implode(',', array_keys($validMatches));
+    // Obtener la media de cada jugador en los partidos válidos
+    $stmtAllPlayers = $pdo->query("
+        SELECT mr.match_id, u.team_id, mr.target_id, AVG(mr.rating) as player_avg
+        FROM match_ratings mr
+        JOIN users u ON mr.target_id = u.id
+        WHERE mr.match_id IN ($matchIdsStr) AND u.team_id IS NOT NULL
+        GROUP BY mr.match_id, u.team_id, mr.target_id
+    ");
+    $allPlayerRatings = $stmtAllPlayers->fetchAll();
+} else {
+    $allPlayerRatings = [];
+}
+
+$ratingsGrouped = [];
+foreach ($allPlayerRatings as $row) {
+    $mId = $row['match_id'];
+    $tId = $row['team_id'];
+    $ratingsGrouped[$mId][$tId][] = (float)$row['player_avg'];
+}
+
+// Ordenar de mayor a menor y quedarnos con los 7 mejores
+foreach ($ratingsGrouped as $mId => &$teamsInMatch) {
+    foreach ($teamsInMatch as $tId => &$avgs) {
+        rsort($avgs);
+        $avgs = array_slice($avgs, 0, 7);
+    }
+}
+unset($teamsInMatch, $avgs);
+
 foreach ($teams as $team) {
     $teamId = $team['id'];
-    
-    // Obtener todos los partidos finalizados y cerrados en los que participó este equipo
-    $stmtMatches = $pdo->prepare("SELECT id FROM matches WHERE (team1_id = ? OR team2_id = ?) AND status = 'finished' AND voting_closed = 1");
-    $stmtMatches->execute([$teamId, $teamId]);
-    $matches = $stmtMatches->fetchAll();
-    
     $teamMatchAvgs = [];
     
-    foreach ($matches as $match) {
-        $matchId = $match['id'];
-        
-        // Obtener la media de cada jugador de ESTE equipo en ESTE partido (max 7)
-        $stmtPlayers = $pdo->prepare("
-            SELECT mr.target_id, AVG(mr.rating) as player_avg 
-            FROM match_ratings mr
-            JOIN users u ON mr.target_id = u.id
-            WHERE mr.match_id = ? AND u.team_id = ?
-            GROUP BY mr.target_id
-            ORDER BY player_avg DESC
-            LIMIT 7
-        ");
-        $stmtPlayers->execute([$matchId, $teamId]);
-        $topPlayers = $stmtPlayers->fetchAll();
-        
-        if (count($topPlayers) > 0) {
-            $sum = 0;
-            foreach ($topPlayers as $tp) {
-                $sum += (float)$tp['player_avg'];
+    $matches = $teamMatches[$teamId] ?? [];
+
+    foreach ($matches as $matchId) {
+        if (isset($ratingsGrouped[$matchId][$teamId])) {
+            $topPlayersAvgs = $ratingsGrouped[$matchId][$teamId];
+            if (count($topPlayersAvgs) > 0) {
+                $teamMatchAvgs[] = array_sum($topPlayersAvgs) / count($topPlayersAvgs);
             }
-            $teamMatchAvgs[] = $sum / count($topPlayers);
         }
     }
     
@@ -60,7 +88,8 @@ usort($teamRatings, function($a, $b) {
 
 // 2. Máximos Goleadores
 $topScorers = $pdo->query("
-    SELECT u.username, u.profile_picture, t.name as team_name, COUNT(me.id) as total
+    SELECT u.id, u.username, u.profile_picture, t.name as team_name, COUNT(me.id) as total,
+           (SELECT COUNT(DISTINCT ml.match_id) FROM match_lineups ml JOIN matches ma ON ml.match_id = ma.id WHERE ml.player_id = u.id AND ma.status = 'finished') as pj
     FROM match_events me
     JOIN users u ON me.player_id = u.id
     LEFT JOIN teams t ON u.team_id = t.id
@@ -72,7 +101,8 @@ $topScorers = $pdo->query("
 
 // 3. Máximos Asistentes
 $topAssists = $pdo->query("
-    SELECT u.username, u.profile_picture, t.name as team_name, COUNT(me.id) as total
+    SELECT u.id, u.username, u.profile_picture, t.name as team_name, COUNT(me.id) as total,
+           (SELECT COUNT(DISTINCT ml.match_id) FROM match_lineups ml JOIN matches ma ON ml.match_id = ma.id WHERE ml.player_id = u.id AND ma.status = 'finished') as pj
     FROM match_events me
     JOIN users u ON me.player_id = u.id
     LEFT JOIN teams t ON u.team_id = t.id
@@ -84,7 +114,8 @@ $topAssists = $pdo->query("
 
 // 4. Jugadores con Más Media de Estrellas
 $topRatedPlayers = $pdo->query("
-    SELECT u.username, u.profile_picture, t.name as team_name, AVG(mr.rating) as avg_rating
+    SELECT u.id, u.username, u.profile_picture, t.name as team_name, AVG(mr.rating) as avg_rating,
+           (SELECT COUNT(DISTINCT ml.match_id) FROM match_lineups ml JOIN matches ma ON ml.match_id = ma.id WHERE ml.player_id = u.id AND ma.status = 'finished') as pj
     FROM match_ratings mr
     JOIN matches m ON mr.match_id = m.id
     JOIN users u ON mr.target_id = u.id
@@ -100,13 +131,44 @@ $topContributors = $pdo->query("
     SELECT u.id, u.username, u.profile_picture, t.name as team_name,
            SUM(CASE WHEN me.event_type = 'goal'   THEN 1 ELSE 0 END) as goals,
            SUM(CASE WHEN me.event_type = 'assist' THEN 1 ELSE 0 END) as assists,
-           COUNT(me.id) as total
+           COUNT(me.id) as total,
+           (SELECT COUNT(DISTINCT ml.match_id) FROM match_lineups ml JOIN matches ma ON ml.match_id = ma.id WHERE ml.player_id = u.id AND ma.status = 'finished') as pj
     FROM match_events me
     JOIN users u ON me.player_id = u.id
     LEFT JOIN teams t ON u.team_id = t.id
     WHERE me.event_type IN ('goal','assist') AND u.role != 'admin'
     GROUP BY u.id
     ORDER BY total DESC, goals DESC, u.username ASC
+    LIMIT 10
+")->fetchAll();
+
+// 6. Más veces MVP del partido
+$topMVPs = $pdo->query("
+    SELECT u.id, u.username, u.profile_picture, t.name as team_name, COUNT(*) as total,
+           (SELECT COUNT(DISTINCT ml.match_id) FROM match_lineups ml JOIN matches ma ON ml.match_id = ma.id WHERE ml.player_id = u.id AND ma.status = 'finished') as pj
+    FROM (
+        SELECT mr.match_id, mr.target_id, AVG(mr.rating) as avg_rating
+        FROM match_ratings mr
+        JOIN matches m ON mr.match_id = m.id
+        WHERE m.voting_closed = 1
+        GROUP BY mr.match_id, mr.target_id
+    ) p
+    JOIN (
+        SELECT match_id, MAX(avg_rating) as max_rating
+        FROM (
+            SELECT mr.match_id, mr.target_id, AVG(mr.rating) as avg_rating
+            FROM match_ratings mr
+            JOIN matches m ON mr.match_id = m.id
+            WHERE m.voting_closed = 1
+            GROUP BY mr.match_id, mr.target_id
+        ) sub
+        GROUP BY match_id
+    ) m_max ON p.match_id = m_max.match_id AND ABS(p.avg_rating - m_max.max_rating) < 0.001
+    JOIN users u ON p.target_id = u.id
+    LEFT JOIN teams t ON u.team_id = t.id
+    WHERE u.role != 'admin'
+    GROUP BY p.target_id
+    ORDER BY total DESC, pj ASC
     LIMIT 10
 ")->fetchAll();
 
@@ -240,7 +302,7 @@ $topContributors = $pdo->query("
         
         <div class="row g-4 d-flex align-items-stretch">
             <!-- Goleadores -->
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card bg-dark border-secondary h-100 shadow">
                     <div class="card-header bg-transparent border-bottom border-secondary text-light fw-bold">
                         <i class="bi bi-vinyl-fill text-primary me-2"></i> Máximos Goleadores
@@ -261,7 +323,10 @@ $topContributors = $pdo->query("
                                     
                                     <div class="flex-grow-1 text-truncate">
                                         <div class="fw-bold fs-6 mb-0"><?php echo htmlspecialchars($player['username']); ?></div>
-                                        <small class="text-muted" style="font-size: 0.70rem;"><?php echo htmlspecialchars($player['team_name'] ?? 'Sin equipo'); ?></small>
+                                        <small class="text-muted" style="font-size: 0.70rem;">
+                                            <?php echo htmlspecialchars($player['team_name'] ?? 'Sin equipo'); ?> 
+                                            <span class="ms-1 px-1 bg-secondary text-white rounded" style="font-size:0.65rem; opacity:0.8;"><?php echo $player['pj']; ?> PJ</span>
+                                        </small>
                                     </div>
                                     
                                     <span class="badge bg-primary rounded-pill ms-2 fs-6 px-3"><?php echo $player['total']; ?></span>
@@ -277,7 +342,7 @@ $topContributors = $pdo->query("
             </div>
 
             <!-- Asistentes -->
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card bg-dark border-secondary h-100 shadow">
                     <div class="card-header bg-transparent border-bottom border-secondary text-light fw-bold">
                         <i class="bi bi-cursor-fill text-warning me-2"></i> Máximos Asistentes
@@ -298,7 +363,10 @@ $topContributors = $pdo->query("
                                     
                                     <div class="flex-grow-1 text-truncate">
                                         <div class="fw-bold fs-6 mb-0"><?php echo htmlspecialchars($player['username']); ?></div>
-                                        <small class="text-muted" style="font-size: 0.70rem;"><?php echo htmlspecialchars($player['team_name'] ?? 'Sin equipo'); ?></small>
+                                        <small class="text-muted" style="font-size: 0.70rem;">
+                                            <?php echo htmlspecialchars($player['team_name'] ?? 'Sin equipo'); ?> 
+                                            <span class="ms-1 px-1 bg-secondary text-white rounded" style="font-size:0.65rem; opacity:0.8;"><?php echo $player['pj']; ?> PJ</span>
+                                        </small>
                                     </div>
                                     
                                     <span class="badge bg-warning text-dark rounded-pill ms-2 fs-6 px-3"><?php echo $player['total']; ?></span>
@@ -314,7 +382,7 @@ $topContributors = $pdo->query("
             </div>
 
             <!-- Mejores Jugadores -->
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card bg-dark border-secondary h-100 shadow">
                     <div class="card-header bg-transparent border-bottom border-secondary text-light fw-bold">
                         <i class="bi bi-star-fill text-success me-2"></i> Mayor Media (MVP)
@@ -335,7 +403,10 @@ $topContributors = $pdo->query("
                                     
                                     <div class="flex-grow-1 text-truncate">
                                         <div class="fw-bold fs-6 mb-0"><?php echo htmlspecialchars($player['username']); ?></div>
-                                        <small class="text-muted" style="font-size: 0.70rem;"><?php echo htmlspecialchars($player['team_name'] ?? 'Sin equipo'); ?></small>
+                                        <small class="text-muted" style="font-size: 0.70rem;">
+                                            <?php echo htmlspecialchars($player['team_name'] ?? 'Sin equipo'); ?> 
+                                            <span class="ms-1 px-1 bg-secondary text-white rounded" style="font-size:0.65rem; opacity:0.8;"><?php echo $player['pj']; ?> PJ</span>
+                                        </small>
                                     </div>
                                     
                                     <span class="badge bg-success rounded-pill ms-2 fs-6 px-3"><?php echo number_format($player['avg_rating'], 2); ?></span>
@@ -344,6 +415,46 @@ $topContributors = $pdo->query("
                         <?php else: ?>
                             <li class="list-group-item bg-transparent text-muted border-0 p-4 text-center">
                                 Aún no hay valoraciones
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- MVPs -->
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card bg-dark border-secondary h-100 shadow">
+                    <div class="card-header bg-transparent border-bottom border-secondary text-light fw-bold">
+                        <i class="bi bi-star-fill text-warning me-2"></i> Más veces MVP
+                    </div>
+                    <ul class="list-group list-group-flush bg-transparent">
+                        <?php if (count($topMVPs) > 0): ?>
+                            <?php foreach ($topMVPs as $i => $player): ?>
+                                <li class="list-group-item bg-transparent text-light border-secondary d-flex align-items-center">
+                                    <span class="fw-bold text-muted me-3" style="min-width: 20px;">#<?php echo $i+1; ?></span>
+                                    
+                                    <?php if (!empty($player['profile_picture'])): ?>
+                                        <img src="<?php echo htmlspecialchars($player['profile_picture']); ?>" class="rounded-circle me-2 object-fit-cover border border-secondary" style="width: 32px; height: 32px;">
+                                    <?php else: ?>
+                                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 32px; height: 32px; font-size: 14px;">
+                                            <?php echo strtoupper(substr($player['username'], 0, 1)); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <div class="flex-grow-1 text-truncate">
+                                        <div class="fw-bold fs-6 mb-0"><?php echo htmlspecialchars($player['username']); ?></div>
+                                        <small class="text-muted" style="font-size: 0.70rem;">
+                                            <?php echo htmlspecialchars($player['team_name'] ?? 'Sin equipo'); ?> 
+                                            <span class="ms-1 px-1 bg-secondary text-white rounded" style="font-size:0.65rem; opacity:0.8;"><?php echo $player['pj']; ?> PJ</span>
+                                        </small>
+                                    </div>
+                                    
+                                    <span class="badge bg-warning text-dark rounded-pill ms-2 fs-6 px-3"><?php echo $player['total']; ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <li class="list-group-item bg-transparent text-muted border-0 p-4 text-center">
+                                Aún no hay MVPs
                             </li>
                         <?php endif; ?>
                     </ul>
@@ -382,7 +493,10 @@ $topContributors = $pdo->query("
                                 <span class="fw-bold"><?php echo htmlspecialchars($p['username']); ?></span>
                             </div>
                         </td>
-                        <td class="text-muted small"><?php echo htmlspecialchars($p['team_name'] ?? 'Sin equipo'); ?></td>
+                        <td class="text-muted small">
+                            <?php echo htmlspecialchars($p['team_name'] ?? 'Sin equipo'); ?>
+                            <span class="ms-1 px-1 bg-secondary text-white rounded" style="font-size:0.65rem; opacity:0.8;"><?php echo $p['pj']; ?> PJ</span>
+                        </td>
                         <td class="text-center"><span class="badge bg-primary rounded-pill px-3"><?php echo $p['goals']; ?></span></td>
                         <td class="text-center"><span class="badge bg-warning text-dark rounded-pill px-3"><?php echo $p['assists']; ?></span></td>
                         <td class="text-center"><span class="badge bg-danger rounded-pill fs-6 px-3 fw-bold"><?php echo $p['total']; ?></span></td>
