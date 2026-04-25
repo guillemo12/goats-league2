@@ -1,5 +1,5 @@
 <?php
-session_set_cookie_params(['lifetime' => 86400 * 30, 'path' => '/']);
+session_set_cookie_params(['lifetime' => 86400 * 30, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax']);
 session_start();
 require_once __DIR__ . '/db.php';
 
@@ -646,7 +646,8 @@ endif;
         }
 
         // Cargar tácica si se seleccionó
-        const loadedPositionsObj = <?php echo $loadedPositions ? $loadedPositions : 'null'; ?>;
+        // Security Fix: Prevent Stored XSS by properly encoding the JSON object before rendering in JS context
+        const loadedPositionsObj = <?php echo $loadedPositions ? json_encode(json_decode($loadedPositions), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : 'null'; ?>;
         if (loadedPositionsObj) {
             draggables.forEach(el => {
                 if (loadedPositionsObj[el.id]) {
