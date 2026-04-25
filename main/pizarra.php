@@ -646,7 +646,20 @@ endif;
         }
 
         // Cargar tácica si se seleccionó
-        const loadedPositionsObj = <?php echo $loadedPositions ? $loadedPositions : 'null'; ?>;
+        // 🛡️ Sentinel: Safe JSON output preventing XSS
+        const loadedPositionsObj = <?php
+            if ($loadedPositions) {
+                // Decode and re-encode to ensure safe formatting and escaping
+                $decoded = json_decode($loadedPositions, true);
+                if ($decoded === null) {
+                    echo 'null';
+                } else {
+                    echo json_encode($decoded, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                }
+            } else {
+                echo 'null';
+            }
+        ?>;
         if (loadedPositionsObj) {
             draggables.forEach(el => {
                 if (loadedPositionsObj[el.id]) {
