@@ -12,3 +12,8 @@
 **Vulnerability:** Found an unauthenticated file upload vulnerability in `main/upload_db.php`. Anyone could upload an arbitrary `.sqlite` file to overwrite the application's entire database, allowing complete takeover of application data.
 **Learning:** Admin tools or developer scripts intended for convenience (like `upload_db.php`) are sometimes left completely unprotected in production or without any authentication checks, representing a severe security risk. This application relies on a session-based role check for other admin pages, but missed it here.
 **Prevention:** Ensure all files accessible via the web server enforce proper authentication and authorization checks. Centralize admin routing if possible to prevent individual files from being exposed without checks.
+
+## 2024-04-25 - Secure Session Cookies against XSS and CSRF
+**Vulnerability:** Session cookies did not have the `HttpOnly` or `SameSite` flags configured, leaving the application highly vulnerable to Cross-Site Scripting (XSS) and Cross-Site Request Forgery (CSRF). Since many state-changing requests use HTTP POST without CSRF tokens, this makes it easier for an attacker to craft a CSRF attack.
+**Learning:** Proper session cookie attributes are a critical defense-in-depth mechanism. Without `HttpOnly`, XSS can easily steal session tokens. Without `SameSite`, CSRF attacks become significantly easier to execute.
+**Prevention:** Always configure `session_set_cookie_params` with `'httponly' => true` and `'samesite' => 'Lax'` globally before calling `session_start()`.
