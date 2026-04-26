@@ -6,10 +6,29 @@ require_once __DIR__ . '/../db.php';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Rate Limiting Logic: lock out after 5 attempts for 5 minutes (300 seconds)
+    if (!isset($_SESSION['login_attempts'])) {
+        $_SESSION['login_attempts'] = 0;
+        $_SESSION['last_attempt_time'] = time();
+    }
+
+    if ($_SESSION['login_attempts'] >= 5) {
+        $time_passed = time() - $_SESSION['last_attempt_time'];
+        if ($time_passed < 300) {
+            $remaining = ceil((300 - $time_passed) / 60);
+            $error = "⚠ Demasiados intentos fallidos. Inténtalo de nuevo en $remaining minuto(s).";
+        } else {
+            // Reset attempts after timeout
+            $_SESSION['login_attempts'] = 0;
+            $_SESSION['last_attempt_time'] = time();
+        }
+    }
+
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare("
+    if (empty($error)) {
+        $stmt = $pdo->prepare("
         SELECT u.id, u.username, u.password, u.role, u.profile_picture, t.name as team_name 
         FROM users u 
         LEFT JOIN teams t ON u.team_id = t.id 
@@ -36,6 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if ($isValid) {
+            // Reset login attempts on successful login
+            $_SESSION['login_attempts'] = 0;
+
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user'] = $user['username'];
             $_SESSION['role'] = $user['role'];
@@ -44,10 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ../index.php');
             exit;
         } else {
+            $_SESSION['login_attempts']++;
+            $_SESSION['last_attempt_time'] = time();
             $error = '⚠ Usuario o contraseña incorrectos';
         }
     } else {
+        $_SESSION['login_attempts']++;
+        $_SESSION['last_attempt_time'] = time();
         $error = '⚠ Usuario o contraseña incorrectos';
+    }
     }
 }
 ?>
