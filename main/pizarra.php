@@ -646,7 +646,8 @@ endif;
         }
 
         // Cargar tácica si se seleccionó
-        const loadedPositionsObj = <?php echo $loadedPositions ? $loadedPositions : 'null'; ?>;
+        const loadedPositionsStr = <?php echo json_encode($loadedPositions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+        const loadedPositionsObj = loadedPositionsStr ? JSON.parse(loadedPositionsStr) : null;
         if (loadedPositionsObj) {
             draggables.forEach(el => {
                 if (loadedPositionsObj[el.id]) {
