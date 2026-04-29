@@ -12,3 +12,8 @@
 **Vulnerability:** Found an unauthenticated file upload vulnerability in `main/upload_db.php`. Anyone could upload an arbitrary `.sqlite` file to overwrite the application's entire database, allowing complete takeover of application data.
 **Learning:** Admin tools or developer scripts intended for convenience (like `upload_db.php`) are sometimes left completely unprotected in production or without any authentication checks, representing a severe security risk. This application relies on a session-based role check for other admin pages, but missed it here.
 **Prevention:** Ensure all files accessible via the web server enforce proper authentication and authorization checks. Centralize admin routing if possible to prevent individual files from being exposed without checks.
+
+## 2026-04-29 - Missing Rate Limiting and Session Fixation
+**Vulnerability:** The login authentication mechanism `main/login/auth.php` lacked session-based rate limiting and failed to regenerate the session ID upon successful login.
+**Learning:** The application was vulnerable to brute-force attacks and session fixation because login attempts were not tracked, and the session ID remained the same pre- and post-authentication.
+**Prevention:** Implement session-based rate limiting by tracking the number of failed login attempts and the timestamp of the last attempt. Always use `session_regenerate_id(true)` upon successful authentication to issue a new session ID and invalidate the old one.
