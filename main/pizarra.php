@@ -16,7 +16,6 @@ $stmtMe = $pdo->prepare("SELECT u.*, t.name as team_name, t.logo as team_logo FR
 $stmtMe->execute([$myUserId]);
 $me = $stmtMe->fetch();
 $myTeamId = $me['team_id'];
-$userRole = $me['role'] ?? ($_SESSION['role'] ?? 'user');
 
 // Recuperar tácticas antiguas que se guardaron sin team_id hacia el equipo actual si existe (Para migrar las que el usuario dijo que no veía)
 if ($myTeamId) {
