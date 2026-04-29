@@ -11,13 +11,13 @@ $meInfo = $stmt->fetch();
 if (!$meInfo || $meInfo['role'] !== 'admin') { header("Location: index.php"); exit; }
 
 try {
-    $pdo->exec("ALTER TABLE matches ADD COLUMN revenue_paid TINYINT(1) DEFAULT 0 AFTER status");
+    $pdo->exec("ALTER TABLE matches ADD COLUMN revenue_paid TINYINT(1) DEFAULT 0");
     echo "Added revenue_paid. \n";
 } catch(Exception $e) { echo "Error or exists: " . $e->getMessage() . "\n"; }
 
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS team_finances (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         team_id INT NOT NULL,
         match_id INT NOT NULL,
         amount DECIMAL(10,2) NOT NULL,

@@ -2,12 +2,12 @@
 require __DIR__ . '/db.php';
 
 try {
-    $pdo->exec("ALTER TABLE teams ADD COLUMN budget DECIMAL(10,2) DEFAULT 0.00 AFTER name");
+    $pdo->exec("ALTER TABLE teams ADD COLUMN budget DECIMAL(10,2) DEFAULT 0.00");
     echo "Added budget to teams.\n";
 } catch(PDOException $e) { echo "budget already exists or error: " . $e->getMessage() . "\n"; }
 
 try {
-    $pdo->exec("ALTER TABLE users ADD COLUMN is_protected TINYINT(1) DEFAULT 0 AFTER role");
+    $pdo->exec("ALTER TABLE users ADD COLUMN is_protected TINYINT(1) DEFAULT 0");
     echo "Added is_protected to users.\n";
 } catch(PDOException $e) { echo "is_protected already exists or error: " . $e->getMessage() . "\n"; }
 
@@ -26,7 +26,7 @@ try {
 
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS transfers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         buyer_team_id INT NOT NULL,
         player_id INT NOT NULL,
         seller_team_id INT NOT NULL,

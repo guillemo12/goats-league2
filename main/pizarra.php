@@ -26,7 +26,7 @@ if ($myTeamId) {
 // --- NUEVO: SISTEMA DE GUARDADO DE TÁCTICAS ---
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS tactics (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INT NOT NULL,
         team_id INT DEFAULT NULL,
         name VARCHAR(100) NOT NULL,
@@ -38,7 +38,7 @@ try {
 
     // Intentar añadir la columna team_id si la tabla antigua se creó hace un paso sin ella
     try {
-        $pdo->exec("ALTER TABLE tactics ADD COLUMN team_id INT DEFAULT NULL AFTER user_id");
+        $pdo->exec("ALTER TABLE tactics ADD COLUMN team_id INT DEFAULT NULL");
     }
     catch (PDOException $e) {
     } // Ya existe
