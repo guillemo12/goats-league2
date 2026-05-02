@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if ($isValid) {
+            // Prevent session fixation
+            session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user'] = $user['username'];
             $_SESSION['role'] = $user['role'];
