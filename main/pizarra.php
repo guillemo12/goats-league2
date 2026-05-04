@@ -1,5 +1,5 @@
 <?php
-session_set_cookie_params(['lifetime' => 86400 * 30, 'path' => '/']);
+session_set_cookie_params(['lifetime' => 86400 * 30, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax']);
 session_start();
 require_once __DIR__ . '/db.php';
 
@@ -646,7 +646,7 @@ endif;
         }
 
         // Cargar tácica si se seleccionó
-        const loadedPositionsObj = <?php echo $loadedPositions ? $loadedPositions : 'null'; ?>;
+        const loadedPositionsObj = <?php echo $loadedPositions ? json_encode(json_decode($loadedPositions), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) : 'null'; ?>;
         if (loadedPositionsObj) {
             draggables.forEach(el => {
                 if (loadedPositionsObj[el.id]) {
