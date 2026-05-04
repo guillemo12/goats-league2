@@ -12,3 +12,8 @@
 **Vulnerability:** Found an unauthenticated file upload vulnerability in `main/upload_db.php`. Anyone could upload an arbitrary `.sqlite` file to overwrite the application's entire database, allowing complete takeover of application data.
 **Learning:** Admin tools or developer scripts intended for convenience (like `upload_db.php`) are sometimes left completely unprotected in production or without any authentication checks, representing a severe security risk. This application relies on a session-based role check for other admin pages, but missed it here.
 **Prevention:** Ensure all files accessible via the web server enforce proper authentication and authorization checks. Centralize admin routing if possible to prevent individual files from being exposed without checks.
+
+## 2024-05-16 - Stored XSS in Tactic Positions
+**Vulnerability:** The `positions` field in the `tactics` table contained user-controlled JSON and was rendered directly into inline JavaScript without proper escaping in `main/pizarra.php`, leading to a Stored XSS vulnerability.
+**Learning:** Database-sourced strings rendered into inline JavaScript contexts (e.g. `const data = <?php echo $data; ?>;`) are highly susceptible to XSS if not safely encoded.
+**Prevention:** Always decode and re-encode JSON data using `json_encode($data, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)` to safely escape characters when rendering data directly in `<script>` blocks.
