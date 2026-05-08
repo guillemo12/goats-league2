@@ -110,7 +110,13 @@ if (isset($_GET['load_tactic'])) {
     }
     $rowLoad = $stmtLoad->fetch();
     if ($rowLoad) {
-        $loadedPositions = $rowLoad['positions'];
+        // Safe decoding and re-encoding for inline JS context
+        $decoded = json_decode($rowLoad['positions'], true);
+        if ($decoded !== null) {
+            $loadedPositions = json_encode($decoded, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+        } else {
+            $loadedPositions = json_encode(new stdClass());
+        }
     }
 }
 // --- FIN SISTEMA DE GUARDADO ---
