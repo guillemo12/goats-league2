@@ -25,10 +25,15 @@ if (!$team) {
 $stmtPlayers = $pdo->prepare("
     SELECT username, role, profile_picture, 
     (
-        SELECT AVG(mr.rating) 
-        FROM match_ratings mr 
-        JOIN matches m ON mr.match_id = m.id 
-        WHERE mr.target_id = users.id AND m.voting_closed = 1
+        SELECT AVG(match_avg)
+        FROM (
+            SELECT target_id, match_id, AVG(rating) as match_avg
+            FROM match_ratings mr
+            JOIN matches m ON mr.match_id = m.id
+            WHERE m.voting_closed = 1
+            GROUP BY target_id, match_id
+        ) sub
+        WHERE sub.target_id = users.id
     ) as rating 
     FROM users 
     WHERE team_id = ? AND role != 'admin' 

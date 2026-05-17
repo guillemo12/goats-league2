@@ -225,13 +225,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Recalcular medias para todos los jugadores de este partido
         $pdo->prepare("
-            UPDATE users u 
-            SET rating = COALESCE((
-                SELECT AVG(mr.rating) 
-                FROM match_ratings mr 
-                JOIN matches m ON mr.match_id = m.id 
-                WHERE mr.target_id = u.id AND m.voting_closed = 1
-            ), 0)
+            UPDATE users u
+            LEFT JOIN (
+                SELECT target_id, AVG(match_avg) as global_avg
+                FROM (
+                    SELECT mr.target_id, mr.match_id, AVG(mr.rating) as match_avg
+                    FROM match_ratings mr
+                    JOIN matches m ON mr.match_id = m.id
+                    WHERE m.voting_closed = 1
+                    GROUP BY mr.target_id, mr.match_id
+                ) sub
+                GROUP BY target_id
+            ) player_avgs ON u.id = player_avgs.target_id
+            SET u.rating = COALESCE(player_avgs.global_avg, 0)
             WHERE u.id IN (SELECT target_id FROM match_ratings WHERE match_id = ?)
         ")->execute([$matchId]);
         
