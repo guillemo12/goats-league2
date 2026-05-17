@@ -26,10 +26,15 @@ $query = "
         
         -- Media de Estrellas MVP
         (
-            SELECT AVG(mr.rating) 
-            FROM match_ratings mr 
-            JOIN matches m ON mr.match_id = m.id 
-            WHERE mr.target_id = u.id AND m.voting_closed = 1
+            SELECT AVG(match_avg)
+            FROM (
+                SELECT target_id, match_id, AVG(rating) as match_avg
+                FROM match_ratings mr
+                JOIN matches m ON mr.match_id = m.id
+                WHERE m.voting_closed = 1
+                GROUP BY target_id, match_id
+            ) sub
+            WHERE sub.target_id = u.id
         ) AS avg_rating,
         
         -- Partidos Jugados (convocado en partidos finalizados)
