@@ -114,14 +114,23 @@ $topAssists = $pdo->query("
 
 // 4. Jugadores con Más Media de Estrellas
 $topRatedPlayers = $pdo->query("
-    SELECT u.id, u.username, u.profile_picture, t.name as team_name, AVG(mr.rating) as avg_rating,
+    SELECT u.id, u.username, u.profile_picture, t.name as team_name,
+           player_avgs.global_avg as avg_rating,
            (SELECT COUNT(DISTINCT ml.match_id) FROM match_lineups ml JOIN matches ma ON ml.match_id = ma.id WHERE ml.player_id = u.id AND ma.status = 'finished') as pj
-    FROM match_ratings mr
-    JOIN matches m ON mr.match_id = m.id
-    JOIN users u ON mr.target_id = u.id
+    FROM users u
+    JOIN (
+        SELECT target_id, AVG(match_avg) as global_avg
+        FROM (
+            SELECT mr.target_id, mr.match_id, AVG(mr.rating) as match_avg
+            FROM match_ratings mr
+            JOIN matches m ON mr.match_id = m.id
+            WHERE m.voting_closed = 1
+            GROUP BY mr.target_id, mr.match_id
+        ) sub
+        GROUP BY target_id
+    ) player_avgs ON u.id = player_avgs.target_id
     LEFT JOIN teams t ON u.team_id = t.id
-    WHERE u.role != 'admin' AND m.voting_closed = 1
-    GROUP BY u.id
+    WHERE u.role != 'admin'
     ORDER BY avg_rating DESC, u.username ASC
     LIMIT 10
 ")->fetchAll();
