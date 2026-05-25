@@ -16,7 +16,7 @@ if (isset($_GET['get_players'])) {
     $teamId = (int)$_GET['get_players'];
     $stmt = $pdo->prepare("SELECT id, username, role FROM users WHERE team_id = ? ORDER BY username");
     $stmt->execute([$teamId]);
-    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
     exit;
 }
 $myUserId = $_SESSION['user_id'];
@@ -229,7 +229,9 @@ function getPlayerNames($ids, $pdo) {
     $placeholders = implode(',', array_fill(0, count($idArray), '?'));
     $stmt = $pdo->prepare("SELECT username FROM users WHERE id IN ($placeholders)");
     $stmt->execute($idArray);
-    return implode(', ', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    $usernames = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $safeUsernames = array_map('htmlspecialchars', $usernames);
+    return implode(', ', $safeUsernames);
 }
 ?>
 <!DOCTYPE html>
@@ -477,10 +479,21 @@ function getPlayerNames($ids, $pdo) {
                     filteredData.forEach(p => {
                         const div = document.createElement('div');
                         div.className = 'form-check small';
-                        div.innerHTML = `
-                            <input class="form-check-input" type="checkbox" name="requested_players[]" value="${p.id}" id="rp${p.id}">
-                            <label class="form-check-label" for="rp${p.id}">${p.username}</label>
-                        `;
+
+                        const input = document.createElement('input');
+                        input.className = 'form-check-input';
+                        input.type = 'checkbox';
+                        input.name = 'requested_players[]';
+                        input.value = p.id;
+                        input.id = 'rp' + p.id;
+
+                        const label = document.createElement('label');
+                        label.className = 'form-check-label';
+                        label.htmlFor = 'rp' + p.id;
+                        label.textContent = p.username;
+
+                        div.appendChild(input);
+                        div.appendChild(label);
                         list.appendChild(div);
                     });
                 }
