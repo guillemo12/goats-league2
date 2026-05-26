@@ -477,10 +477,21 @@ function getPlayerNames($ids, $pdo) {
                     filteredData.forEach(p => {
                         const div = document.createElement('div');
                         div.className = 'form-check small';
-                        div.innerHTML = `
-                            <input class="form-check-input" type="checkbox" name="requested_players[]" value="${p.id}" id="rp${p.id}">
-                            <label class="form-check-label" for="rp${p.id}">${p.username}</label>
-                        `;
+
+                        const input = document.createElement('input');
+                        input.className = 'form-check-input';
+                        input.type = 'checkbox';
+                        input.name = 'requested_players[]';
+                        input.value = p.id;
+                        input.id = 'rp' + p.id;
+
+                        const label = document.createElement('label');
+                        label.className = 'form-check-label';
+                        label.htmlFor = 'rp' + p.id;
+                        label.textContent = p.username; // Prevents DOM-based XSS
+
+                        div.appendChild(input);
+                        div.appendChild(label);
                         list.appendChild(div);
                     });
                 }
