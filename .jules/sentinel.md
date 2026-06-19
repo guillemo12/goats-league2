@@ -22,3 +22,8 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+
+## 2024-06-19 - [Fix DOM XSS]
+**Vulnerability:** A DOM-based XSS was present in `main/tratos.php` where dynamically fetched player usernames were inserted directly into the DOM using `.innerHTML = \`...${p.username}...\``. Since usernames are user-controlled, this allows execution of malicious scripts if an attacker registers with a payload.
+**Learning:** Whenever dealing with JSON data retrieved via AJAX/fetch that contains user input, it must never be injected directly into the HTML using `innerHTML` without prior sanitization.
+**Prevention:** Construct DOM elements securely using `document.createElement()` and assign user input strictly via `.textContent` to ensure the browser treats it as data rather than executable code.
