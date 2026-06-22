@@ -13,15 +13,22 @@ if (!$meInfo || $meInfo['role'] !== 'admin') { header("Location: index.php"); ex
 // --- DATABASE AUTO-FIX ---
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS team_finances (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         team_id INT NOT NULL,
         match_id INT NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )");
     // Comprobar si existe revenue_paid en matches
-    $checkMatchCol = $pdo->query("SHOW COLUMNS FROM matches LIKE 'revenue_paid'");
-    if (!$checkMatchCol->fetch()) {
+    $checkMatchCol = $pdo->query("PRAGMA table_info(matches)");
+    $hasCol = false;
+    while ($col = $checkMatchCol->fetch()) {
+        if ($col['name'] === 'revenue_paid') {
+            $hasCol = true;
+            break;
+        }
+    }
+    if (!$hasCol) {
         $pdo->exec("ALTER TABLE matches ADD COLUMN revenue_paid TINYINT(1) DEFAULT 0");
     }
 } catch (PDOException $e) {}
