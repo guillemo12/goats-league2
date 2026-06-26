@@ -254,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Acción: Jugador valora a un rival
     if ($action === 'rate_player' && $userId && $match['status'] === 'finished') {
-        if ($match['voting_closed']) {
+        if ($match['voting_closed'] == 1) {
             if (!empty($_POST['ajax'])) {
                 header('Content-Type: application/json');
                 echo json_encode(['ok' => false, 'error' => 'Las votaciones para este partido están cerradas.']);
@@ -770,12 +770,12 @@ foreach ($stmtStats->fetchAll() as $row) {
             <div class="card bg-dark border-success mt-4 mb-5 shadow">
                 <div class="card-header bg-success text-white fw-bold d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-star-fill me-1"></i> Valora a los rivales del partido</span>
-                    <?php if ($match['voting_closed']): ?>
+                    <?php if ($match['voting_closed'] == 1): ?>
                         <span class="badge bg-danger"><i class="bi bi-lock-fill"></i> CERRADO</span>
                     <?php endif; ?>
                 </div>
                 <div class="card-body">
-                    <?php if ($match['voting_closed']): ?>
+                    <?php if ($match['voting_closed'] == 1): ?>
                         <div class="alert alert-danger bg-dark border-danger text-center m-0">
                             <i class="bi bi-lock-fill me-2"></i> El administrador ha cerrado las votaciones para este partido. Ya no se permiten nuevos votos.
                         </div>
