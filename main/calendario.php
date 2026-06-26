@@ -277,17 +277,17 @@ endif; ?>
                                         <?php if ($match['status'] === 'finished'): ?>
                                             <span class="badge bg-success">Finalizado</span>
                                             <div class="ms-2 d-inline-block">
-                                                <span class="badge <?php echo $match['voting_closed'] ? 'bg-danger' : 'bg-success'; ?>-subtle <?php echo $match['voting_closed'] ? 'text-danger' : 'text-success'; ?> border <?php echo $match['voting_closed'] ? 'border-danger' : 'border-success'; ?>" style="font-size: 0.7rem;">
-                                                    <i class="bi <?php echo $match['voting_closed'] ? 'bi-lock-fill' : 'bi-unlock-fill'; ?>"></i>
-                                                    <?php echo $match['voting_closed'] ? 'Cerrado' : 'Abierto'; ?>
+                                                <span class="badge <?php echo ($match['voting_closed'] == 1) ? 'bg-danger' : 'bg-success'; ?>-subtle <?php echo ($match['voting_closed'] == 1) ? 'text-danger' : 'text-success'; ?> border <?php echo ($match['voting_closed'] == 1) ? 'border-danger' : 'border-success'; ?>" style="font-size: 0.7rem;">
+                                                    <i class="bi <?php echo ($match['voting_closed'] == 1) ? 'bi-lock-fill' : 'bi-unlock-fill'; ?>"></i>
+                                                    <?php echo ($match['voting_closed'] == 1) ? 'Cerrado' : 'Abierto'; ?>
                                                 </span>
                                                 <?php if ($isAdmin): ?>
                                                     <form method="POST" class="d-inline ms-1">
                                                         <input type="hidden" name="action" value="toggle_voting">
                                                         <input type="hidden" name="match_id" value="<?php echo $match['id']; ?>">
-                                                        <input type="hidden" name="new_state" value="<?php echo $match['voting_closed'] ? '0' : '1'; ?>">
-                                                        <button type="submit" class="btn btn-link p-0 text-decoration-none" style="font-size: 0.7rem; vertical-align: middle;">
-                                                            <?php echo $match['voting_closed'] ? 'Abrir' : 'Cerrar'; ?>
+                                                        <input type="hidden" name="new_state" value="<?php echo ($match['voting_closed'] == 1) ? '2' : '1'; ?>">
+                                                        <button type="submit" class="btn btn-sm btn-outline-secondary w-100 mt-2" style="font-size: 0.75rem;">
+                                                            <?php echo ($match['voting_closed'] == 1) ? 'Abrir' : 'Cerrar'; ?>
                                                         </button>
                                                     </form>
                                                 <?php endif; ?>

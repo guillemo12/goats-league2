@@ -219,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Acción: Admin cambia estado de votaciones (Abrir/Cerrar)
     if ($action === 'toggle_voting' && $isAdmin && $match['status'] === 'finished') {
-        $newClosedStatus = $match['voting_closed'] ? 0 : 1;
+        $newClosedStatus = ($match['voting_closed'] == 1) ? 2 : 1; // 2 significa Forzado Abierto
         $stmt = $pdo->prepare("UPDATE matches SET voting_closed = ? WHERE id = ?");
         $stmt->execute([$newClosedStatus, $matchId]);
         
@@ -354,7 +354,7 @@ if ($userId && $match['status'] === 'finished') {
 
 // Media de notas recibidas por cada jugador en ESTE partido (sólo si las votaciones están cerradas)
 $matchPlayerAvgs = [];
-if ($match['voting_closed']) {
+if ($match['voting_closed'] == 1) {
     $stmtMatchAvgs = $pdo->prepare("SELECT target_id, AVG(rating) as avg_rating, COUNT(rating) as votes FROM match_ratings WHERE match_id = ? GROUP BY target_id");
     $stmtMatchAvgs->execute([$matchId]);
     foreach ($stmtMatchAvgs->fetchAll() as $row) {
@@ -645,7 +645,7 @@ foreach ($stmtStats->fetchAll() as $row) {
             <div class="card bg-dark border-info mt-4 mb-3 shadow">
                 <div class="card-header bg-info text-dark fw-bold d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-gear-fill me-1"></i> Administrar Votaciones</span>
-                    <?php if ($match['voting_closed']): ?>
+                    <?php if ($match['voting_closed'] == 1): ?>
                         <span class="badge bg-danger border border-dark">Cerradas</span>
                     <?php else: ?>
                         <span class="badge bg-success border border-dark">Abiertas</span>
@@ -655,14 +655,14 @@ foreach ($stmtStats->fetchAll() as $row) {
                     <form method="POST" class="d-flex align-items-center flex-wrap gap-3">
                         <input type="hidden" name="action" value="toggle_voting">
                         <p class="mb-0 text-muted small flex-grow-1">
-                            <?php if ($match['voting_closed']): ?>
+                            <?php if ($match['voting_closed'] == 1): ?>
                                 Las votaciones están cerradas. Las notas ya cuentan para su media global.
                             <?php else: ?>
                                 Las votaciones están abiertas. Las notas de este partido aún no son visibles ni cuentan para la media global. 
                             <?php endif; ?>
                         </p>
-                        <button type="submit" class="btn <?php echo $match['voting_closed'] ? 'btn-outline-success' : 'btn-outline-danger'; ?> text-nowrap">
-                            <?php echo $match['voting_closed'] ? '<i class="bi bi-unlock-fill"></i> Abrir Votaciones' : '<i class="bi bi-lock-fill"></i> Cerrar Votaciones'; ?>
+                        <button type="submit" class="btn <?php echo ($match['voting_closed'] == 1) ? 'btn-outline-success' : 'btn-outline-danger'; ?> text-nowrap">
+                            <?php echo ($match['voting_closed'] == 1) ? '<i class="bi bi-unlock-fill"></i> Abrir Votaciones' : '<i class="bi bi-lock-fill"></i> Cerrar Votaciones'; ?>
                         </button>
                     </form>
                 </div>
