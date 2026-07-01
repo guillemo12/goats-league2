@@ -22,3 +22,13 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+
+## 2026-07-01 - DOM-based XSS in JavaScript
+**Vulnerability:** Found DOM-based XSS vulnerabilities in  and  where untrusted data ( and ) was concatenated and injected into the DOM via .
+**Learning:** Assigning unsanitized input to  exposes the application to client-side XSS.
+**Prevention:** Use safe DOM manipulation methods like  and  or set the  property when dynamically rendering untrusted data on the client.
+
+## 2024-05-14 - DOM-based XSS via innerHTML
+**Vulnerability:** Found DOM-based XSS vulnerabilities in `main/match.php` and `main/tratos.php` where untrusted data (JSON API responses like `data.error` or `p.username`) was concatenated directly into `.innerHTML` assignments.
+**Learning:** Even if data originates from an internal API response, if it reflects user-controlled input (like a username) or dynamic server messages, concatenating it into `.innerHTML` creates a client-side execution context for malicious payloads.
+**Prevention:** When dynamically rendering untrusted data in JavaScript, always use safe DOM manipulation methods such as `document.createElement()`, `document.createTextNode()`, or property assignments like `.textContent`.
