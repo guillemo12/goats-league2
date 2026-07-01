@@ -1045,14 +1045,16 @@ foreach ($stmtStats->fetchAll() as $row) {
                     });
                 } else {
                     // Error: mostrar mensaje rojo con el texto del servidor
-                    errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.error || 'Error desconocido.');
+                    errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ';
+                    errMsg.appendChild(document.createTextNode(data.error || 'Error desconocido.')); // Prevents DOM-based XSS
                     errMsg.classList.remove('d-none');
                 }
             })
             .catch(() => {
                 statSaveBtn.disabled = false;
                 btnText.textContent  = 'Guardar Stats';
-                errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Error de red. Inténtalo de nuevo.';
+                errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ';
+                errMsg.appendChild(document.createTextNode('Error de red. Inténtalo de nuevo.'));
                 errMsg.classList.remove('d-none');
             });
         });
