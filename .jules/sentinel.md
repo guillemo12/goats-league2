@@ -22,3 +22,8 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+
+## 2024-05-14 - DOM-based XSS via innerHTML
+**Vulnerability:** Found DOM-based Cross-Site Scripting (XSS) vulnerabilities in `main/tratos.php` and `main/match.php` where data parsed from JSON API responses (`p.username` and `data.error`) were directly interpolated into strings and assigned to `.innerHTML`.
+**Learning:** Using `.innerHTML` to insert dynamic content derived from APIs exposes the application to client-side code injection, especially when the data originates from potentially attacker-controlled inputs (like a username).
+**Prevention:** Always use safe DOM manipulation methods. Use `document.createElement()` to build elements and `.textContent` or `document.createTextNode()` to set textual content, preventing any embedded HTML/JS from being executed.
