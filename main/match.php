@@ -1045,7 +1045,8 @@ foreach ($stmtStats->fetchAll() as $row) {
                     });
                 } else {
                     // Error: mostrar mensaje rojo con el texto del servidor
-                    errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.error || 'Error desconocido.');
+                    errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> <span class="err-text"></span>';
+                    errMsg.querySelector('.err-text').textContent = data.error || 'Error desconocido.';
                     errMsg.classList.remove('d-none');
                 }
             })
