@@ -22,3 +22,8 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+
+## 2024-05-18 - DOM-based XSS in JS error handling and player lists
+**Vulnerability:** Untrusted variables from JSON API responses (`p.username` and `data.error`) were being rendered directly into the DOM using `.innerHTML` inside `main/tratos.php` and `main/match.php`. This allows executing arbitrary JS if an attacker manipulates the JSON response values.
+**Learning:** Even when the primary payload is JSON and not rendered server-side by PHP, the client-side JavaScript must still safely handle the content. Constructing DOM strings and pushing them via `innerHTML` is inherently unsafe for dynamic content.
+**Prevention:** Always use safe native DOM manipulation APIs in JavaScript, such as `document.createElement`, `textContent`, and `document.createTextNode`, rather than string concatenation or template literals assigned to `.innerHTML`.
