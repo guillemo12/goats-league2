@@ -1027,7 +1027,11 @@ foreach ($stmtStats->fetchAll() as $row) {
 
                 if (data.ok) {
                     // Éxito: mostrar mensaje verde
-                    okMsg.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Estadística guardada correctamente.';
+                    okMsg.textContent = '';
+                    const icon = document.createElement('i');
+                    icon.className = 'bi bi-check-circle-fill me-2';
+                    okMsg.appendChild(icon);
+                    okMsg.appendChild(document.createTextNode('Estadística guardada correctamente.'));
                     okMsg.classList.remove('d-none');
                     setTimeout(() => { okMsg.classList.add('d-none'); }, 3000);
 
@@ -1045,14 +1049,22 @@ foreach ($stmtStats->fetchAll() as $row) {
                     });
                 } else {
                     // Error: mostrar mensaje rojo con el texto del servidor
-                    errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.error || 'Error desconocido.');
+                    errMsg.textContent = '';
+                    const icon = document.createElement('i');
+                    icon.className = 'bi bi-exclamation-triangle-fill me-2';
+                    errMsg.appendChild(icon);
+                    errMsg.appendChild(document.createTextNode(' ' + (data.error || 'Error desconocido.')));
                     errMsg.classList.remove('d-none');
                 }
             })
             .catch(() => {
                 statSaveBtn.disabled = false;
                 btnText.textContent  = 'Guardar Stats';
-                errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Error de red. Inténtalo de nuevo.';
+                errMsg.textContent = '';
+                const icon = document.createElement('i');
+                icon.className = 'bi bi-exclamation-triangle-fill me-2';
+                errMsg.appendChild(icon);
+                errMsg.appendChild(document.createTextNode(' Error de red. Inténtalo de nuevo.'));
                 errMsg.classList.remove('d-none');
             });
         });
