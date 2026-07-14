@@ -460,10 +460,15 @@ function getPlayerNames($ids, $pdo) {
     function loadTargetPlayers(teamId) {
         const list = document.getElementById('target-players-list');
         if (!teamId) {
-            list.innerHTML = 'Selecciona un equipo para ver sus jugadores...';
+            list.textContent = 'Selecciona un equipo para ver sus jugadores...';
             return;
         }
-        list.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Cargando...';
+        list.textContent = '';
+        const spinner = document.createElement('div');
+        spinner.className = 'spinner-border spinner-border-sm';
+        spinner.setAttribute('role', 'status');
+        list.appendChild(spinner);
+        list.appendChild(document.createTextNode(' Cargando...'));
         
         // Solo jugadores que NO sean capitanes
         fetch('tratos.php?get_players=' + teamId)
@@ -471,22 +476,37 @@ function getPlayerNames($ids, $pdo) {
             .then(data => {
                 const filteredData = data.filter(p => p.role !== 'capitan');
                 if (filteredData.length === 0) {
-                    list.innerHTML = 'Este equipo no tiene jugadores transferibles (solo capitanes).';
+                    list.textContent = 'Este equipo no tiene jugadores transferibles (solo capitanes).';
                 } else {
-                    list.innerHTML = '';
+                    list.textContent = '';
                     filteredData.forEach(p => {
                         const div = document.createElement('div');
                         div.className = 'form-check small';
-                        div.innerHTML = `
-                            <input class="form-check-input" type="checkbox" name="requested_players[]" value="${p.id}" id="rp${p.id}">
-                            <label class="form-check-label" for="rp${p.id}">${p.username}</label>
-                        `;
+
+                        const input = document.createElement('input');
+                        input.className = 'form-check-input';
+                        input.type = 'checkbox';
+                        input.name = 'requested_players[]';
+                        input.value = p.id;
+                        input.id = 'rp' + p.id;
+
+                        const label = document.createElement('label');
+                        label.className = 'form-check-label';
+                        label.htmlFor = 'rp' + p.id;
+                        label.textContent = p.username;
+
+                        div.appendChild(input);
+                        div.appendChild(label);
                         list.appendChild(div);
                     });
                 }
             })
             .catch(() => {
-                list.innerHTML = '<span class="text-danger">Error al cargar jugadores.</span>';
+                list.textContent = '';
+                const span = document.createElement('span');
+                span.className = 'text-danger';
+                span.textContent = 'Error al cargar jugadores.';
+                list.appendChild(span);
             });
     }
 
