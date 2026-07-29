@@ -22,3 +22,7 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+## 2024-07-29 - [Fix DOM-based XSS in frontend logic]
+**Vulnerability:** DOM-based XSS via direct string concatenation of user-controlled or untrusted API response data into `.innerHTML` in `main/match.php` and `main/tratos.php`.
+**Learning:** Using `.innerHTML` with template literals containing dynamic properties (e.g. `data.error`, `p.username`) creates an XSS risk.
+**Prevention:** Construct elements with `document.createElement` and insert untrusted text using `.textContent` or `document.createTextNode()`.
