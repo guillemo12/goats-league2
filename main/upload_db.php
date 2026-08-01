@@ -13,21 +13,26 @@ if (!$meInfo || $meInfo['role'] !== 'admin') { header("Location: index.php"); ex
 $target_dir = "/app/data/";
 $target_file = $target_dir . "database.sqlite";
 
-// 1. Intentar crear la carpeta si no existe y dar permisos
+// 1. Intentar crear la carpeta si no existe y dar permisos restrictivos
 if (!file_exists($target_dir)) {
-    mkdir($target_dir, 0777, true);
+    mkdir($target_dir, 0700, true);
 }
-chmod($target_dir, 0777);
+chmod($target_dir, 0700);
 
 if (isset($_POST["submit"])) {
-    if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
-        chmod($target_file, 0666); // Permiso de lectura/escritura para la DB
-        echo "✅ ¡Éxito! Archivo subido a: " . $target_file;
-    }
-    else {
-        echo "❌ Error al subir. Detalles: ";
-        print_r($_FILES);
-        echo "<br>¿La carpeta es escribible?: " . (is_writable($target_dir) ? 'SÍ' : 'NO');
+    $fileName = $_FILES["db_file"]["name"];
+    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+    if ($fileExt === 'sqlite') {
+        if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
+            chmod($target_file, 0600); // Permiso restrictivo de lectura/escritura para la DB
+            echo "✅ ¡Éxito! Archivo subido a: " . $target_file;
+        } else {
+            error_log("Upload failed in upload_db.php: " . print_r($_FILES, true));
+            echo "❌ Error al subir.";
+        }
+    } else {
+        echo "❌ Tipo de archivo inválido. Solo se permiten archivos .sqlite.";
     }
 }
 ?>
