@@ -1045,7 +1045,9 @@ foreach ($stmtStats->fetchAll() as $row) {
                     });
                 } else {
                     // Error: mostrar mensaje rojo con el texto del servidor
-                    errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.error || 'Error desconocido.');
+                    // SECURITY: Use textContent for error strings from server to prevent DOM-based XSS
+                    errMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ';
+                    errMsg.appendChild(document.createTextNode(data.error || 'Error desconocido.'));
                     errMsg.classList.remove('d-none');
                 }
             })
