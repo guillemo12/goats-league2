@@ -22,3 +22,7 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+## 2026-08-04 - [upload_db.php Permissions & XSS]
+**Vulnerability:** Directory and file creation used overly permissive `0777` and `0666` permissions allowing unauthorized local read/write to the SQLite DB. Additionally, failed uploads leaked the `$_FILES` array via `print_r` to the frontend, leading to potential Reflected XSS and path disclosure.
+**Learning:** Legacy scripts sometimes optimize for 'it works' over 'it's secure', leaving overly permissive directory structures.
+**Prevention:** Always use `0700` for private app data directories and `0600` for sensitive files. Never dump raw arrays or exceptions directly to the user interface.
