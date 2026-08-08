@@ -22,3 +22,7 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+## 2024-10-27 - Fix DOM-based XSS in tratos.php and match.php
+**Vulnerability:** DOM-based XSS vulnerability via unsafe string interpolation in `innerHTML`. User-provided data (`username` and dynamic server error message) were directly appended to the DOM.
+**Learning:** Even internal API responses or seemingly innocuous user data (like a username) can be vectors for XSS if injected unsafely. Directly modifying `innerHTML` with unsanitized data from `fetch` responses is a common pitfall.
+**Prevention:** Always use safe DOM manipulation techniques like `document.createElement()`, `document.createTextNode()`, and `.textContent` when inserting dynamic data into the DOM to prevent script execution.
