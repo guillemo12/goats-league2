@@ -43,12 +43,32 @@ if ($myTeamId) {
     
     $teamRating = 0;
     if (count($finishedMatches) > 0) {
+        $matchIds = array_column($finishedMatches, 'id');
+        $placeholders = implode(',', array_fill(0, count($matchIds), '?'));
+        $stmtRatings = $pdo->prepare("SELECT mr.match_id, mr.target_id, AVG(mr.rating) as avg_rating
+            FROM match_ratings mr
+            JOIN users u ON mr.target_id = u.id
+            WHERE mr.match_id IN ($placeholders) AND u.team_id = ?
+            GROUP BY mr.match_id, mr.target_id");
+        $stmtRatings->execute(array_merge($matchIds, [$myTeamId]));
+        $rows = $stmtRatings->fetchAll(PDO::FETCH_ASSOC);
+
+        $ratingsByMatch = [];
+        foreach ($rows as $row) {
+            $ratingsByMatch[$row['match_id']][] = (float)$row['avg_rating'];
+        }
+
         $matchAvgs = [];
         foreach ($finishedMatches as $fm) {
-            $stmtTop7 = $pdo->prepare("SELECT AVG(rating) FROM match_ratings WHERE match_id = ? AND target_id IN (SELECT id FROM users WHERE team_id = ?) GROUP BY target_id ORDER BY AVG(rating) DESC LIMIT 7");
-            $stmtTop7->execute([$fm['id'], $myTeamId]);
-            $topRatings = $stmtTop7->fetchAll(PDO::FETCH_COLUMN);
-            if (count($topRatings) > 0) $matchAvgs[] = array_sum($topRatings) / count($topRatings);
+            $mId = $fm['id'];
+            if (isset($ratingsByMatch[$mId])) {
+                $playerRatings = $ratingsByMatch[$mId];
+                rsort($playerRatings);
+                $top7 = array_slice($playerRatings, 0, 7);
+                if (count($top7) > 0) {
+                    $matchAvgs[] = array_sum($top7) / count($top7);
+                }
+            }
         }
         if (count($matchAvgs) > 0) $teamRating = array_sum($matchAvgs) / count($matchAvgs);
     }
