@@ -66,10 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             $pdo->beginTransaction();
             try {
-                $updateTeamStmt = $pdo->prepare("UPDATE teams SET budget = budget + ? WHERE id = ?");
-                $insertFinanceStmt = $pdo->prepare("INSERT INTO team_finances (team_id, match_id, amount) VALUES (?, ?, ?)");
-                $updateMatchStmt = $pdo->prepare("UPDATE matches SET revenue_paid = 1 WHERE id = ?");
-                
+                $teamAdditions = [];
+                $financesToInsert = [];
+                $processedMatchIds = [];
+
                 foreach ($matches as $match) {
                     $mId = $match['id'];
                     $t1 = $match['team1_id'];
@@ -87,17 +87,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             }
 
                             if ($tAvg > 0) {
-                                // Give money
-                                $updateTeamStmt->execute([$tAvg, $tid]);
-                                // Log finances
-                                $insertFinanceStmt->execute([$tid, $mId, $tAvg]);
+                                $teamAdditions[$tid] = ($teamAdditions[$tid] ?? 0) + $tAvg;
+                                $financesToInsert[] = [$tid, $mId, $tAvg];
                             }
                         }
                     }
-                    // Mark as paid
-                    $updateMatchStmt->execute([$mId]);
+                    $processedMatchIds[] = $mId;
                     $payoutCount++;
                 }
+
+                // Batch update team budgets
+                if (!empty($teamAdditions)) {
+                    $updateTeamStmt = $pdo->prepare("UPDATE teams SET budget = budget + ? WHERE id = ?");
+                    foreach ($teamAdditions as $tid => $amount) {
+                        $updateTeamStmt->execute([$amount, $tid]);
+                    }
+                }
+
+                // Batch insert team finances in chunks
+                if (!empty($financesToInsert)) {
+                    $chunkSize = 100;
+                    $chunks = array_chunk($financesToInsert, $chunkSize);
+                    foreach ($chunks as $chunk) {
+                        $fPlaceholders = implode(',', array_fill(0, count($chunk), '(?, ?, ?)'));
+                        $values = [];
+                        foreach ($chunk as $row) {
+                            $values[] = $row[0];
+                            $values[] = $row[1];
+                            $values[] = $row[2];
+                        }
+                        $stmtInsert = $pdo->prepare("INSERT INTO team_finances (team_id, match_id, amount) VALUES $fPlaceholders");
+                        $stmtInsert->execute($values);
+                    }
+                }
+
+                // Batch mark matches as paid
+                if (!empty($processedMatchIds)) {
+                    $mPlaceholders = implode(',', array_fill(0, count($processedMatchIds), '?'));
+                    $stmtUpdateMatches = $pdo->prepare("UPDATE matches SET revenue_paid = 1 WHERE id IN ($mPlaceholders)");
+                    $stmtUpdateMatches->execute($processedMatchIds);
+                }
+
                 $pdo->commit();
             } catch (Exception $e) {
                 $pdo->rollBack();
