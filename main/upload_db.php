@@ -15,19 +15,24 @@ $target_file = $target_dir . "database.sqlite";
 
 // 1. Intentar crear la carpeta si no existe y dar permisos
 if (!file_exists($target_dir)) {
-    mkdir($target_dir, 0777, true);
+    mkdir($target_dir, 0700, true);
 }
-chmod($target_dir, 0777);
+chmod($target_dir, 0700);
 
 if (isset($_POST["submit"])) {
-    if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
-        chmod($target_file, 0666); // Permiso de lectura/escritura para la DB
-        echo "✅ ¡Éxito! Archivo subido a: " . $target_file;
-    }
-    else {
-        echo "❌ Error al subir. Detalles: ";
-        print_r($_FILES);
-        echo "<br>¿La carpeta es escribible?: " . (is_writable($target_dir) ? 'SÍ' : 'NO');
+    $file_info = pathinfo($_FILES["db_file"]["name"]);
+    if (isset($file_info['extension']) && strtolower($file_info['extension']) === 'sqlite') {
+        if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
+            chmod($target_file, 0600); // Permiso de lectura/escritura para la DB (propietario)
+            echo "✅ ¡Éxito! Archivo subido.";
+        }
+        else {
+            echo "❌ Error al subir el archivo.";
+            error_log("Upload Error: " . print_r($_FILES, true));
+            error_log("Directory Writable: " . (is_writable($target_dir) ? 'YES' : 'NO'));
+        }
+    } else {
+        echo "❌ Error: El archivo debe tener extensión .sqlite";
     }
 }
 ?>
