@@ -22,3 +22,7 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+## 2026-09-02 - [Information Disclosure and Insecure File Upload in DB Upload Script]
+**Vulnerability:** The script main/upload_db.php exposed the server's internal temporary file path via `print_r($_FILES)` on upload failure. Additionally, it lacked file extension validation (allowing arbitrary file uploads) and assigned overly permissive permissions (0777 to directories, 0666 to the database file).
+**Learning:** Exposing $_FILES data directly to the user leaks internal system structure. Furthermore, missing file validation on upload scripts combined with lax permissions severely compromises the server.
+**Prevention:** Always validate uploaded file extensions against an allowlist, use restrictive permissions (0700/0600) for sensitive files like databases, and log debug information via `error_log()` instead of displaying it to the user.
