@@ -25,8 +25,8 @@ if (isset($_POST["submit"])) {
         echo "✅ ¡Éxito! Archivo subido a: " . $target_file;
     }
     else {
-        echo "❌ Error al subir. Detalles: ";
-        print_r($_FILES);
+        echo "❌ Error al subir. Revisa los registros del servidor para más detalles.";
+        error_log("Upload error details: " . print_r($_FILES, true));
         echo "<br>¿La carpeta es escribible?: " . (is_writable($target_dir) ? 'SÍ' : 'NO');
     }
 }
