@@ -22,3 +22,7 @@
 **Vulnerability:** Session cookies lacked security flags (`httponly`, `secure`, `samesite`), making them vulnerable to XSS and CSRF. The authentication system also lacked `session_regenerate_id(true)` upon successful login, leading to a session fixation risk.
 **Learning:** Proper session management is critical. Cookies should always be secured, and session IDs must be rotated after authentication to prevent attackers from reusing an established session ID.
 **Prevention:** Always use `session_set_cookie_params` with `httponly => true`, `secure => true`, and `samesite => 'Lax'`. Always call `session_regenerate_id(true)` immediately after successful user authentication to mitigate session fixation.
+## 2024-07-02 - Sentinel: [HIGH] Fix Secure Uploads and Information Leak
+ **Vulnerability:** Unsafe directory/file permissions (`0777`/`0666`) and sensitive information exposure via `print_r($_FILES)` in `main/upload_db.php`.
+ **Learning:** In shared hosting or poorly-isolated containers, overly permissive file permissions allow unauthorized actors to read or overwrite critical application data. Direct echoing of `$_FILES` exposes internal filesystem details useful for further exploits.
+ **Prevention:** Use `0700` for directories and `0600` for sensitive files. Always use `error_log()` for debugging data instead of sending it to the user's browser.
