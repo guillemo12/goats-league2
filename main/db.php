@@ -1,29 +1,22 @@
 <?php
 // 1. Configuración de conexión (Mantenemos tu lógica original)
-$dbUrl = getenv('DATABASE_URL') ?: getenv('MYSQL_URL') ?: null;
+$dbUrl = getenv('DATABASE_URL') ?: null;
 
-if ($dbUrl) {
-    $parts  = parse_url($dbUrl);
-    $host   = $parts['host'];
-    $user   = $parts['user'];
-    $pass   = $parts['pass'] ?? '';
-    $port   = $parts['port'] ?? 3306;
-    $dbname = ltrim($parts['path'], '/');
-} else {
-    $host   = getenv('MYSQLHOST')     ?: 'localhost';
-    $user   = getenv('MYSQLUSER')     ?: 'root';
-    $pass   = getenv('MYSQLPASSWORD') ?: '';
-    $port   = getenv('MYSQLPORT')     ?: '3306';
-    $dbname = getenv('MYSQLDATABASE') ?: 'goats_league';
+if (!$dbUrl) {
+    $target_dir = "/app/data/";
+    if (!file_exists($target_dir)) {
+        // Fallback for local testing if /app/data/ isn't available
+        $target_dir = __DIR__ . "/../data/";
+        if (!file_exists($target_dir)) {
+            @mkdir($target_dir, 0777, true);
+        }
+    }
+    $dbUrl = "sqlite:" . $target_dir . "database.sqlite";
 }
 
 try {
     // Intentamos conectar (permitir mock DB url en testing)
-    if (strpos($dbUrl ?? '', 'sqlite:') === 0) {
-        $pdo = new PDO($dbUrl);
-    } else {
-        $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8", $user, $pass);
-    }
+    $pdo = new PDO($dbUrl);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 

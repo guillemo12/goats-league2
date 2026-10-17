@@ -13,9 +13,9 @@ $pdo->exec("
     CREATE TABLE teams (id INTEGER PRIMARY KEY, name TEXT, logo TEXT);
     CREATE TABLE matches (id INTEGER PRIMARY KEY, team1_id INTEGER, team2_id INTEGER, status TEXT, voting_closed INTEGER, match_date TEXT, official_score_team1 INTEGER, official_score_team2 INTEGER, jornada INTEGER);
     CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, role TEXT, team_id INTEGER, rating REAL, profile_picture TEXT);
-    CREATE TABLE match_lineups (match_id INTEGER, team_id INTEGER, player_id INTEGER);
+    -- Removed match_lineups to trigger error
     CREATE TABLE match_events (id INTEGER PRIMARY KEY, match_id INTEGER, team_id INTEGER, event_type TEXT, player_id INTEGER, minute INTEGER, related_player_id INTEGER);
-    CREATE TABLE match_ratings (id INTEGER PRIMARY KEY, match_id INTEGER, voter_id INTEGER, target_id INTEGER, rating REAL);
+    CREATE TABLE match_ratings (id INTEGER PRIMARY KEY, match_id INTEGER, voter_id INTEGER, target_id INTEGER, rating REAL, UNIQUE(match_id, voter_id, target_id));
 ");
 
 $pdo->exec("INSERT INTO teams (id, name, logo) VALUES (1, 'Team A', 'logoA.png'), (2, 'Team B', 'logoB.png')");

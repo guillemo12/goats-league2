@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $playerId = (int)$_POST['player_id'];
         $teamIdForLineup = $isAdmin ? (int)$_POST['team_id'] : $myTeamId;
         try {
-            $stmt = $pdo->prepare("INSERT IGNORE INTO match_lineups (match_id, team_id, player_id) VALUES (?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT OR IGNORE INTO match_lineups (match_id, team_id, player_id) VALUES (?, ?, ?)");
             $stmt->execute([$matchId, $teamIdForLineup, $playerId]);
         } catch (PDOException $e) {
             error_log("Error DB al añadir lineup: " . $e->getMessage());
@@ -285,7 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmtCheckOpponent->fetchColumn()) {
                 try {
                     // Guardar voto
-                    $stmtRate = $pdo->prepare("INSERT INTO match_ratings (match_id, voter_id, target_id, rating) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE rating = VALUES(rating)");
+                    $stmtRate = $pdo->prepare("INSERT INTO match_ratings (match_id, voter_id, target_id, rating) VALUES (?, ?, ?, ?) ON CONFLICT(match_id, voter_id, target_id) DO UPDATE SET rating = excluded.rating");
                     $stmtRate->execute([$matchId, $userId, $targetId, $rating]);
                     
                     // Actualizar la media global del jugador objetivo (solo de partidos cerrados)
