@@ -15,19 +15,27 @@ $target_file = $target_dir . "database.sqlite";
 
 // 1. Intentar crear la carpeta si no existe y dar permisos
 if (!file_exists($target_dir)) {
-    mkdir($target_dir, 0777, true);
+    mkdir($target_dir, 0700, true); // Security fix: restrict directory access to owner
 }
-chmod($target_dir, 0777);
+chmod($target_dir, 0700); // Security fix: restrict directory access to owner
 
 if (isset($_POST["submit"])) {
-    if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
-        chmod($target_file, 0666); // Permiso de lectura/escritura para la DB
-        echo "✅ ¡Éxito! Archivo subido a: " . $target_file;
-    }
-    else {
-        echo "❌ Error al subir. Detalles: ";
-        print_r($_FILES);
-        echo "<br>¿La carpeta es escribible?: " . (is_writable($target_dir) ? 'SÍ' : 'NO');
+    $extension = strtolower(pathinfo($_FILES["db_file"]["name"], PATHINFO_EXTENSION));
+
+    // Security fix: validate file extension
+    if ($extension !== 'sqlite') {
+        echo "❌ Error: Solo se permiten archivos .sqlite";
+    } else {
+        if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
+            chmod($target_file, 0600); // Security fix: restrict file access to owner
+            echo "✅ ¡Éxito! Archivo subido a: " . $target_file;
+        } else {
+            echo "❌ Error al subir.";
+            // Security fix: log internal details securely instead of exposing to users
+            error_log("DB Upload Error: move_uploaded_file failed.");
+            error_log("FILES data: " . print_r($_FILES, true));
+            error_log("Directory writable: " . (is_writable($target_dir) ? 'YES' : 'NO'));
+        }
     }
 }
 ?>
