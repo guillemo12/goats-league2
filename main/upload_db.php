@@ -15,19 +15,27 @@ $target_file = $target_dir . "database.sqlite";
 
 // 1. Intentar crear la carpeta si no existe y dar permisos
 if (!file_exists($target_dir)) {
-    mkdir($target_dir, 0777, true);
+    mkdir($target_dir, 0700, true); // Security: Restrict directory permissions to owner
 }
-chmod($target_dir, 0777);
+chmod($target_dir, 0700); // Security: Restrict directory permissions to owner
 
-if (isset($_POST["submit"])) {
-    if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
-        chmod($target_file, 0666); // Permiso de lectura/escritura para la DB
-        echo "✅ ¡Éxito! Archivo subido a: " . $target_file;
-    }
-    else {
-        echo "❌ Error al subir. Detalles: ";
-        print_r($_FILES);
-        echo "<br>¿La carpeta es escribible?: " . (is_writable($target_dir) ? 'SÍ' : 'NO');
+if (isset($_POST["submit"]) && isset($_FILES["db_file"])) {
+    // Security: Validate file extension
+    $extension = strtolower(pathinfo($_FILES["db_file"]["name"], PATHINFO_EXTENSION));
+
+    if ($extension === 'sqlite') {
+        if (move_uploaded_file($_FILES["db_file"]["tmp_name"], $target_file)) {
+            chmod($target_file, 0600); // Security: Restrict file permissions to owner
+            echo "✅ ¡Éxito! Archivo subido correctamente.";
+        }
+        else {
+            // Security: Don't leak internals to user, log securely instead
+            error_log("Upload error details: " . print_r($_FILES, true));
+            error_log("Target dir writable: " . (is_writable($target_dir) ? 'YES' : 'NO'));
+            echo "❌ Error al subir el archivo.";
+        }
+    } else {
+        echo "❌ Error: Solo se permiten archivos .sqlite.";
     }
 }
 ?>
@@ -37,11 +45,3 @@ if (isset($_POST["submit"])) {
   <input type="file" name="db_file" id="db_file">
   <input type="submit" value="Subir Base de Datos" name="submit">
 </form>
-
-<hr>
-<h3>Estado del sistema:</h3>
-<?php
-echo "Ruta actual: " . getcwd() . "<br>";
-echo "Ruta destino: " . $target_dir . "<br>";
-echo "Existe destino: " . (file_exists($target_dir) ? 'SÍ' : 'NO') . "<br>";
-?>
